@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 
+use crate::config::Config;
 use crate::core::Engine;
 pub use crate::core::{CommitKey, Decision, ImeGuess, ImeSnapshot, ObservedEvent, Platform};
 
@@ -47,8 +48,9 @@ pub trait Autostart {
     fn uninstall(&self) -> anyhow::Result<()>;
 }
 
-pub fn run() -> Result<()> {
-    backend::run()
+pub fn run(config: &Config) -> Result<()> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| backend::run(config)))
+        .map_err(|_| anyhow::anyhow!("platform backend panicked after cleanup"))?
 }
 
 pub fn install_autostart() -> Result<()> {

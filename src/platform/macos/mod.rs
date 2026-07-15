@@ -1,6 +1,8 @@
 use anyhow::{bail, Result};
 
-pub(super) fn run() -> Result<()> {
+use crate::config::Config;
+
+pub(super) fn run(_config: &Config) -> Result<()> {
     bail!("backend not implemented")
 }
 

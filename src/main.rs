@@ -34,7 +34,7 @@ fn run() -> Result<()> {
     let config = Config::load()?;
     init_logging(&config)?;
     log::info!("configuration loaded");
-    platform::run()
+    platform::run(&config)
 }
 
 fn init_logging(config: &Config) -> Result<()> {

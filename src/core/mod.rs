@@ -98,6 +98,11 @@ impl Engine {
         self.tracker.is_composing()
     }
 
+    /// Clears heuristic state after the platform reports dropped observations.
+    pub fn reset_composition(&mut self) {
+        self.tracker.reset();
+    }
+
     /// Processes one classified event at a caller-supplied monotonic timestamp.
     pub fn handle_event(
         &mut self,
@@ -477,6 +482,17 @@ mod tests {
             Decision::Ignore
         );
         assert!(engine.is_composing());
+    }
+
+    #[test]
+    fn platform_uncertainty_reset_clears_composition() {
+        let mut engine = Engine::new(&config(IdleAction::None, true), Platform::Windows);
+        let mut provider = MockImeStateProvider::new(ImeGuess::Yes, None);
+        start_composing(&mut engine, &mut provider);
+
+        engine.reset_composition();
+
+        assert!(!engine.is_composing());
     }
 
     #[test]
