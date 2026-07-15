@@ -211,7 +211,7 @@ pub trait Autostart {
 
 | 項目 | 方式 |
 |---|---|
-| キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。戻り値1で抑止 |
+| キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。リピート状態もCapsLock専用のscanCode状態で追跡し、vkCodeに依存しない。戻り値1で抑止 |
 | マウス観測 | `WH_MOUSE_LL`(クリックのみ、Composingリセット用) |
 | フォーカス観測 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` |
 | `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で送信。フォーカス窓を取得できない場合は前面トップレベル窓へフォールバック。解決中に前面窓が変化・応答なし・IMEウィンドウなし → `Unknown` |

@@ -41,6 +41,7 @@ pub(crate) struct QueuedEvent {
 static EVENT_QUEUE: OnceLock<Arc<EventQueue>> = OnceLock::new();
 static EVENT_GENERATION: AtomicUsize = AtomicUsize::new(0);
 static CAPTURE_ENABLED: AtomicBool = AtomicBool::new(false);
+static CAPS_LOCK_DOWN: AtomicBool = AtomicBool::new(false);
 static KEY_STATES: [AtomicBool; KEY_STATE_COUNT] =
     [const { AtomicBool::new(false) }; KEY_STATE_COUNT];
 
@@ -130,6 +131,7 @@ impl CaptureGuard {
         for state in &KEY_STATES {
             state.store(false, Ordering::Relaxed);
         }
+        CAPS_LOCK_DOWN.store(false, Ordering::Relaxed);
         EVENT_GENERATION.store(0, Ordering::Release);
         CAPTURE_ENABLED.store(true, Ordering::Release);
         Self
@@ -247,12 +249,13 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         return call_next(code, wparam, lparam);
     }
 
-    let repeat = update_physical_key_state(key.vkCode, is_down, is_up);
-
     // Physical Caps Lock is identified solely by scan code 0x3A. Both down and
     // up are suppressed synchronously; any requested pass-through is later
-    // re-injected with CLIME's marker by the worker.
+    // re-injected with CLIME's marker by the worker. Its repeat state is also
+    // scan-code-specific: JIS layouts can report different vkCode values for
+    // the same physical key across IME modes or event boundaries.
     if is_caps_lock_scan_code(key.scanCode) {
+        let repeat = update_key_state(&CAPS_LOCK_DOWN, is_down, is_up);
         if is_down {
             enqueue(ObservedEvent::TriggerKeyDown {
                 shift: shift_down(),
@@ -263,6 +266,8 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         }
         return LRESULT(1);
     }
+
+    let repeat = update_physical_key_state(key.vkCode, is_down, is_up);
 
     if is_down {
         if is_commit_like(key.vkCode) {
@@ -365,6 +370,10 @@ fn update_physical_key_state(vk_code: u32, is_down: bool, is_up: bool) -> bool {
         return false;
     };
 
+    update_key_state(state, is_down, is_up)
+}
+
+fn update_key_state(state: &AtomicBool, is_down: bool, is_up: bool) -> bool {
     if is_down {
         state.swap(true, Ordering::AcqRel)
     } else {
@@ -443,6 +452,16 @@ mod tests {
         assert!(is_own_injection(true, INJECTION_MARKER));
         assert!(!is_own_injection(false, INJECTION_MARKER));
         assert!(!is_own_injection(true, INJECTION_MARKER + 1));
+    }
+
+    #[test]
+    fn capslock_repeat_state_uses_scan_code_event_boundaries() {
+        let state = AtomicBool::new(false);
+
+        assert!(!update_key_state(&state, true, false));
+        assert!(update_key_state(&state, true, false));
+        assert!(!update_key_state(&state, false, true));
+        assert!(!update_key_state(&state, true, false));
     }
 
     #[test]

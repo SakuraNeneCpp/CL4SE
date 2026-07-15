@@ -125,7 +125,12 @@ impl Engine {
             } => {
                 // A physical Caps Lock must remain suppressed even when its
                 // logical action is ignored, unless pass-through is explicit.
-                if repeat || other_mods {
+                if repeat {
+                    log::debug!("trigger suppressed: key repeat");
+                    return Self::log_trigger_decision(Decision::Suppress);
+                }
+                if other_mods {
+                    log::debug!("trigger suppressed: Ctrl/Alt/Win/Cmd modifier active");
                     return Self::log_trigger_decision(Decision::Suppress);
                 }
                 if shift && self.shift_passthrough {
