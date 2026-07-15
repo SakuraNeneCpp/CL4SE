@@ -236,7 +236,7 @@ pub trait Autostart {
 | 権限 | **入力監視(Input Monitoring)** と **アクセシビリティ** をTCCで手動許可。初回は `clime run` を手動実行して許可を済ませてから `install-autostart` する運用。バイナリのパスを変えると再許可が必要 |
 | Shift+パススルー | CapsLockトグルのプログラム的切替は `IOHIDSetModifierLockState`(準private API)が必要 → **v1はベストエフォート**。不可なら `shift_passthrough` はmacOSで未サポートとしてdoctorで通知 |
 
-既知の制約: ターミナルの「Secure Keyboard Entry」有効時はイベントタップが無効化される。hidutilリマップはクラッシュ時に残留し得る → `clime doctor` に復元機能(`hidutil property --set '{"UserKeyMapping":[]}'` 相当)を持たせ、READMEにも手動復元コマンドを記載する。
+既知の制約: ターミナルの「Secure Keyboard Entry」有効時はイベントタップが無効化される。hidutilリマップはクラッシュ時に残留し得る → `clime doctor` が残留した CLIME リマップを検出・復元する。手動で復元する場合は `/usr/bin/hidutil property --set '{"UserKeyMapping":[]}'` を実行する。
 
 ### 3.3 Linux
 
