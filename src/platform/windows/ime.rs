@@ -1,3 +1,5 @@
+use std::mem::size_of;
+
 use anyhow::{Context, Result};
 use windows::{
     core::GUID,
@@ -14,8 +16,8 @@ use windows::{
                 GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE, TF_PROFILETYPE_INPUTPROCESSOR,
             },
             WindowsAndMessaging::{
-                GetForegroundWindow, SendMessageTimeoutW, SMTO_ABORTIFHUNG, SMTO_BLOCK,
-                WM_IME_CONTROL,
+                GetForegroundWindow, GetGUIThreadInfo, GetWindowThreadProcessId,
+                SendMessageTimeoutW, GUITHREADINFO, SMTO_ABORTIFHUNG, SMTO_BLOCK, WM_IME_CONTROL,
             },
         },
     },
@@ -159,20 +161,60 @@ impl ImeStateProvider for WindowsImeStateProvider {
 }
 
 fn foreground_ime_window() -> Option<HWND> {
-    // SAFETY: Both functions return borrowed HWND values managed by Windows;
-    // CLIME only checks and sends a bounded message to them.
+    let input_window = foreground_input_window()?;
+    // SAFETY: input_window is a non-null HWND returned by Windows. The result
+    // is a borrowed IME window handle that CLIME only checks and queries.
+    let ime_window = unsafe { ImmGetDefaultIMEWnd(input_window) };
+    (!ime_window.0.is_null()).then_some(ime_window)
+}
+
+fn foreground_input_window() -> Option<HWND> {
+    // SAFETY: GetForegroundWindow has no preconditions and returns a borrowed
+    // handle managed by Windows.
     let foreground = unsafe { GetForegroundWindow() };
     if foreground.0.is_null() {
         return None;
     }
-    // SAFETY: foreground is a non-null HWND returned by GetForegroundWindow.
-    let ime_window = unsafe { ImmGetDefaultIMEWnd(foreground) };
-    (!ime_window.0.is_null()).then_some(ime_window)
+
+    // SAFETY: foreground is a valid borrowed HWND. No process-id output is
+    // requested, so Windows only returns the owning GUI thread identifier.
+    let foreground_thread = unsafe { GetWindowThreadProcessId(foreground, None) };
+    let mut gui = GUITHREADINFO {
+        cbSize: size_of::<GUITHREADINFO>() as u32,
+        ..Default::default()
+    };
+    let focused = if foreground_thread == 0 {
+        None
+    } else {
+        // SAFETY: gui points to writable storage with cbSize initialized as
+        // required. foreground_thread came from the foreground HWND above.
+        unsafe { GetGUIThreadInfo(foreground_thread, &mut gui) }
+            .ok()
+            .and_then(|()| focus_window_for_foreground(foreground, &gui))
+    };
+
+    // A focus switch during resolution could pair an old HWND with a new IME
+    // state. Treat that race as uncertainty instead of risking a false commit.
+    // SAFETY: GetForegroundWindow has no preconditions.
+    let foreground_after_resolution = unsafe { GetForegroundWindow() };
+    if foreground_after_resolution != foreground {
+        return None;
+    }
+
+    Some(focused.unwrap_or(foreground))
+}
+
+fn focus_window_for_foreground(foreground: HWND, gui: &GUITHREADINFO) -> Option<HWND> {
+    (gui.hwndActive == foreground && !gui.hwndFocus.0.is_null()).then_some(gui.hwndFocus)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_hwnd(value: usize) -> HWND {
+        HWND(std::ptr::without_provenance_mut(value))
+    }
 
     #[test]
     fn only_verified_profiles_are_recognized() {
@@ -193,5 +235,36 @@ mod tests {
 
         profile.dwProfileType = 0;
         assert_eq!(recognized_ime_id(&profile), None);
+    }
+
+    #[test]
+    fn focused_child_window_is_preferred_for_the_active_foreground() {
+        let foreground = test_hwnd(1);
+        let focus = test_hwnd(2);
+        let gui = GUITHREADINFO {
+            hwndActive: foreground,
+            hwndFocus: focus,
+            ..Default::default()
+        };
+
+        assert_eq!(focus_window_for_foreground(foreground, &gui), Some(focus));
+    }
+
+    #[test]
+    fn missing_or_stale_focus_falls_back_to_the_foreground_window() {
+        let foreground = test_hwnd(1);
+        let stale = GUITHREADINFO {
+            hwndActive: test_hwnd(2),
+            hwndFocus: test_hwnd(3),
+            ..Default::default()
+        };
+        let missing = GUITHREADINFO {
+            hwndActive: foreground,
+            hwndFocus: HWND::default(),
+            ..Default::default()
+        };
+
+        assert_eq!(focus_window_for_foreground(foreground, &stale), None);
+        assert_eq!(focus_window_for_foreground(foreground, &missing), None);
     }
 }
