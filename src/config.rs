@@ -8,27 +8,27 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 const CONFIG_DIRECTORY_NAME: &str = "clime";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct Config {
-    pub(crate) general: GeneralConfig,
-    pub(crate) detection: DetectionConfig,
+pub struct Config {
+    pub general: GeneralConfig,
+    pub detection: DetectionConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct GeneralConfig {
-    pub(crate) idle_action: IdleAction,
-    pub(crate) shift_passthrough: bool,
-    pub(crate) commit_key: CommitKeyConfig,
-    pub(crate) log_level: LogLevel,
+pub struct GeneralConfig {
+    pub idle_action: IdleAction,
+    pub shift_passthrough: bool,
+    pub commit_key: CommitKeyConfig,
+    pub log_level: LogLevel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct DetectionConfig {
-    pub(crate) heuristic_timeout_secs: u64,
+pub struct DetectionConfig {
+    pub heuristic_timeout_secs: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum IdleAction {
+pub enum IdleAction {
     None,
     #[serde(rename = "capslock")]
     CapsLock,
@@ -36,7 +36,7 @@ pub(crate) enum IdleAction {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum CommitKeyConfig {
+pub enum CommitKeyConfig {
     Auto,
     Enter,
     CtrlM,
@@ -44,7 +44,7 @@ pub(crate) enum CommitKeyConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum LogLevel {
+pub enum LogLevel {
     Error,
     Warn,
     Info,
@@ -53,7 +53,7 @@ pub(crate) enum LogLevel {
 }
 
 impl Config {
-    pub(crate) fn load() -> Result<Self> {
+    pub fn load() -> Result<Self> {
         let base_dirs = BaseDirs::new()
             .ok_or_else(|| anyhow!("could not determine the configuration directory"))?;
         Self::load_from(
@@ -109,7 +109,7 @@ impl Default for Config {
 }
 
 impl LogLevel {
-    pub(crate) const fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Error => "error",
             Self::Warn => "warn",

@@ -3,6 +3,7 @@
 use anyhow::Result;
 
 use crate::core::Engine;
+pub use crate::core::{CommitKey, Decision, ImeGuess, ImeSnapshot, ObservedEvent, Platform};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -21,41 +22,12 @@ use self::windows as backend;
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 compile_error!("CLIME supports only Windows, macOS, and Linux");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ImeGuess {
-    Yes,
-    No,
-    Unknown,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CommitKey {
-    Enter,
-    CtrlM,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImeSnapshot {
-    pub active: ImeGuess,
-    pub ime_id: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObservedEvent {
-    TriggerKeyDown { shift: bool, other_mods: bool },
-    PrintableKeyDown,
-    CommitLikeKeyDown,
-    MouseClick,
-    FocusChanged,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Decision {
-    InjectCommitKey(CommitKey),
-    PassThroughCapsLock,
-    Suppress,
-    Ignore,
-}
+#[cfg(target_os = "windows")]
+pub const CURRENT_PLATFORM: Platform = Platform::Windows;
+#[cfg(target_os = "macos")]
+pub const CURRENT_PLATFORM: Platform = Platform::MacOs;
+#[cfg(target_os = "linux")]
+pub const CURRENT_PLATFORM: Platform = Platform::Linux;
 
 pub trait KeyInterceptor {
     fn run(&mut self, engine: &mut Engine, injector: &mut dyn KeyInjector) -> anyhow::Result<()>;
@@ -75,18 +47,18 @@ pub trait Autostart {
     fn uninstall(&self) -> anyhow::Result<()>;
 }
 
-pub(crate) fn run() -> Result<()> {
+pub fn run() -> Result<()> {
     backend::run()
 }
 
-pub(crate) fn install_autostart() -> Result<()> {
+pub fn install_autostart() -> Result<()> {
     backend::install_autostart()
 }
 
-pub(crate) fn uninstall_autostart() -> Result<()> {
+pub fn uninstall_autostart() -> Result<()> {
     backend::uninstall_autostart()
 }
 
-pub(crate) fn doctor() -> Result<()> {
+pub fn doctor() -> Result<()> {
     backend::doctor()
 }

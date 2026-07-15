@@ -1,10 +1,6 @@
-mod config;
-pub mod core;
-pub mod platform;
-
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use config::Config;
+use clime::{config::Config, platform};
 
 #[derive(Debug, Parser)]
 #[command(name = "clime", version, about)]

@@ -56,7 +56,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | マイルストーン | 状態 | 備考 |
 |---|---|---|
 | M0 スキャフォールド | 完了 | CLI骨格・設定・platformスタブ・CI |
-| M1 core層 | 未着手 | |
+| M1 core層 | 完了 | Engine・CompositionTracker・確定キー解決・シナリオテスト |
 | M2 Windows | 未着手 | |
 | M3 macOS | 未着手 | |
 | M4 Linux | 未着手 | |
