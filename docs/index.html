@@ -939,7 +939,7 @@
             変換確定のつもりでEnterを押し、そのままメッセージを送ってしまう事故を減らします。
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#install">すぐに使う ↓</a>
+            <a class="button button-primary" href="#install">コマンドからインストール</a>
             <a
               class="button button-secondary os-download"
               href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/tag/v1.0.0"
@@ -993,7 +993,7 @@
               <span class="feature-number">01</span>
               <h3>簡単無料インストール</h3>
               <p>
-                このページの下の方にあるコマンドをコピペするだけで導入できます。アンインストールのコマンドもあるので、不満があれば簡単にアンインストールできます。
+                インストーラをダウンロードするか, このページの下の方にあるコマンドをコピペするだけで導入できます。アンインストールのコマンドもあるので、不満があれば簡単にアンインストールできます。
               </p>
             </article>
             <article class="feature-card">
@@ -1355,7 +1355,7 @@
         const downloads = {
           windows: {
             label: 'Windows版インストーラをダウンロード',
-            href: 'https://sakuranenecpp.github.io/CLIME_CapsLockIMEcommit/downloads/clime-windows-installer.cmd',
+            href: 'downloads/clime-windows-installer.cmd',
             filename: 'clime-windows-installer.cmd',
             note: 'ダウンロード後、clime-windows-installer.cmdをダブルクリックしてください。Windowsの確認が出た場合は、ファイル名を確認して「実行」を選びます。'
           },
@@ -1377,6 +1377,30 @@
         if (selectedDownload.filename) {
           download.setAttribute('download', selectedDownload.filename);
           download.removeAttribute('target');
+          download.addEventListener('click', async (event) => {
+            event.preventDefault();
+            download.setAttribute('aria-busy', 'true');
+            try {
+              const response = await fetch(download.href, { cache: 'no-store' });
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const installer = await response.arrayBuffer();
+              const objectUrl = URL.createObjectURL(
+                new Blob([installer], { type: 'application/octet-stream' })
+              );
+              const saveLink = document.createElement('a');
+              saveLink.href = objectUrl;
+              saveLink.download = selectedDownload.filename;
+              saveLink.hidden = true;
+              document.body.appendChild(saveLink);
+              saveLink.click();
+              saveLink.remove();
+              window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            } catch (_) {
+              downloadNote.textContent = 'ダウンロードに失敗しました。ページを再読み込みして、もう一度お試しください。';
+            } finally {
+              download.removeAttribute('aria-busy');
+            }
+          });
         } else {
           download.removeAttribute('download');
           download.setAttribute('target', '_blank');
