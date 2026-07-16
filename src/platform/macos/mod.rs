@@ -79,6 +79,7 @@ pub(super) fn uninstall_autostart() -> Result<()> {
 }
 
 pub(super) fn doctor() -> Result<()> {
+    println!("CLIME doctor (macOS)");
     let mut has_error = false;
     let tcc = diagnostics::tcc_status();
     println!(
@@ -89,10 +90,15 @@ pub(super) fn doctor() -> Result<()> {
     println!("CGEvent posting: {}", diagnostic_label(tcc.event_posting));
     if !tcc.input_monitoring || !tcc.accessibility || !tcc.event_posting {
         has_error = true;
+        println!("Fix TCC permissions:");
+        println!("  1. Run `clime run` manually once, then stop it with Ctrl+C.");
         println!(
-            "TCC setup: run `clime run` manually, grant Input Monitoring and Accessibility in System Settings > Privacy & Security, then run `clime install-autostart`."
+            "  2. In System Settings > Privacy & Security, enable CLIME under Input Monitoring and Accessibility."
         );
-        println!("If the clime binary path changes, remove and grant both permissions again.");
+        println!("  3. Rerun `clime doctor`; install autostart only after it reports OK.");
+        println!(
+            "If the clime binary path changes, remove the old TCC entries and grant both permissions again."
+        );
     }
 
     match MacOsImeStateProvider::current_source_id() {
@@ -103,6 +109,9 @@ pub(super) fn doctor() -> Result<()> {
         None => {
             has_error = true;
             println!("Current input source: ERROR (TIS input source ID unavailable)");
+            println!(
+                "Fix: add and select a keyboard input source in System Settings > Keyboard > Text Input, then retry."
+            );
         }
     }
 
@@ -121,7 +130,7 @@ pub(super) fn doctor() -> Result<()> {
         }
     }
     println!(
-        "Manual hidutil recovery: /usr/bin/hidutil property --set '{{\"UserKeyMapping\":[]}}'"
+        "If Caps Lock remains remapped after a crash, recover with: /usr/bin/hidutil property --set '{{\"UserKeyMapping\":[]}}'"
     );
 
     match ModifierLock::open().and_then(|modifier| modifier.current_caps_lock_state()) {
@@ -130,10 +139,15 @@ pub(super) fn doctor() -> Result<()> {
             "Shift+CapsLock pass-through: WARN unsupported; Caps Lock will remain suppressed: {error:#}"
         ),
     }
+    println!(
+        "Runtime note: Terminal Secure Keyboard Entry disables event taps; turn it off while using CLIME."
+    );
 
     if has_error {
+        println!("Result: ERROR. Apply the fixes above, then rerun `clime doctor`.");
         bail!("macOS doctor found setup problems")
     } else {
+        println!("Result: OK. Next: run `clime install-autostart`.");
         Ok(())
     }
 }

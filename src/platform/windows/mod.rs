@@ -35,7 +35,7 @@ use windows::{
 
 use crate::{
     config::Config,
-    core::{Decision, Engine, Platform},
+    core::{Decision, Engine, ImeGuess, Platform},
     platform::{Autostart, ImeStateProvider, KeyInjector},
 };
 
@@ -91,6 +91,8 @@ pub(super) fn uninstall_autostart() -> Result<()> {
 }
 
 pub(super) fn doctor() -> Result<()> {
+    println!("CLIME doctor (Windows)");
+    let mut has_error = false;
     let mut message = MSG::default();
     // SAFETY: See run; this only creates the doctor thread's message queue.
     let _ = unsafe { PeekMessageW(&mut message, None, 0, 0, PM_NOREMOVE) };
@@ -102,27 +104,57 @@ pub(super) fn doctor() -> Result<()> {
         }
         Err(error) => {
             println!("Windows hooks: ERROR: {error:#}");
-            return Err(error).context("Windows hook diagnostic failed");
+            println!(
+                "Fix: close other keyboard-hook tools, allow clime.exe in security software, and retry; administrator privileges are not normally required."
+            );
+            has_error = true;
         }
     }
 
-    let _com = ComApartment::initialize()?;
-    let ime_window = WindowsImeStateProvider::has_foreground_ime_window();
-    if ime_window {
-        println!("Foreground IME window: OK");
-    } else {
-        println!(
-            "Foreground IME window: unavailable (focus an IME-aware text field and retry; CLIME fails safe to Unknown)"
-        );
+    match ComApartment::initialize() {
+        Ok(_com) => {
+            let ime_window = WindowsImeStateProvider::has_foreground_ime_window();
+            if ime_window {
+                println!("Foreground IME window: OK");
+            } else {
+                println!("Foreground IME window: WARN unavailable in this terminal");
+                println!(
+                    "Check: run `clime run` and perform README T1 in an IME-aware editor; unsupported applications safely remain inactive."
+                );
+            }
+
+            let mut provider = WindowsImeStateProvider::new();
+            let snapshot = provider.snapshot();
+            let profile = snapshot.ime_id.as_deref().unwrap_or("none");
+            println!(
+                "IME snapshot: active={:?}, recognized_profile={profile}",
+                snapshot.active
+            );
+            if snapshot.active == ImeGuess::Unknown {
+                println!(
+                    "IME query: WARN state is Unknown in this terminal; CLIME safely will not inject for Unknown."
+                );
+            }
+            if snapshot.ime_id.is_none() {
+                println!(
+                    "Commit key: INFO unrecognized profile; commit_key=auto safely falls back to Enter."
+                );
+            }
+        }
+        Err(error) => {
+            has_error = true;
+            println!("COM/TSF: ERROR: {error:#}");
+            println!("Fix: sign out of Windows, sign back in, and rerun `clime doctor`.");
+        }
     }
-    let mut provider = WindowsImeStateProvider::new();
-    let snapshot = provider.snapshot();
-    println!(
-        "IME snapshot: active={:?}, recognized_profile={}",
-        snapshot.active,
-        snapshot.ime_id.as_deref().unwrap_or("none")
-    );
-    Ok(())
+
+    if has_error {
+        println!("Result: ERROR. Apply the fixes above, then rerun `clime doctor`.");
+        bail!("Windows doctor found setup problems")
+    } else {
+        println!("Result: OK. Next: run `clime install-autostart`.");
+        Ok(())
+    }
 }
 
 fn message_loop() -> Result<()> {

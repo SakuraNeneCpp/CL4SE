@@ -60,7 +60,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | M2 Windows | 完了 | フック・IME判定・キー注入・自動起動・doctor |
 | M3 macOS | 完了 | hidutil・CGEventTap・TIS・キー注入・自動起動・doctor |
 | M4 Linux | 未着手 | |
-| M5 リリース整備 | 未着手 | |
+| M5 リリース整備 | 完了 | release workflow・doctor案内・インストール手順・CHANGELOG |
 
 ---
 

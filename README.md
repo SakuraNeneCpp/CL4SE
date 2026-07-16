@@ -8,6 +8,69 @@
 
 ---
 
+## インストール
+
+### 1. リリースバイナリを配置する
+
+[GitHub Releases](https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases) から使用するOS向けのファイルと `SHA256SUMS` をダウンロードし、チェックサムを確認する。
+
+| OS | リリースファイル | 推奨する固定配置先 |
+|---|---|---|
+| Windows x64 | `clime-windows-x86_64.exe` | `%LOCALAPPDATA%\Programs\CLIME\clime.exe` |
+| macOS (Apple Silicon / Intel universal) | `clime-macos-universal` | `~/Applications/CLIME/clime` |
+| Linux x64 | `clime-linux-x86_64` | `~/.local/bin/clime` |
+
+macOS / Linux では配置後に実行権限を付ける。
+
+```sh
+chmod 755 /path/to/clime
+```
+
+自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v0.1.0 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
+
+### 2. 権限を設定し診断する
+
+#### Windows
+
+管理者権限は不要。次を実行し、フックとCOM/TSFにエラーがなく `Result: OK` と表示されることを確認する。doctorを実行したターミナルでIMEウィンドウを取得できない場合は `WARN` になるが、安全のため状態を `Unknown` として注入しない。登録後に §5.5 T1 をIME対応エディタで確認する。
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\CLIME\clime.exe" doctor
+```
+
+#### macOS
+
+先に固定配置したバイナリを手動起動し、「入力監視」と「アクセシビリティ」を許可する。許可後は `Ctrl+C` で停止して診断する。
+
+```sh
+~/Applications/CLIME/clime run
+~/Applications/CLIME/clime doctor
+```
+
+両方の権限は「システム設定 > プライバシーとセキュリティ」で確認できる。バイナリを移動すると再許可が必要になる。Terminalの Secure Keyboard Entry はイベントタップを無効にするため、CLIME利用中はオフにする。
+
+#### Linux
+
+診断を実行し、表示される `/dev/input`、`/dev/uinput`、fcitx5/IBus、Caps Lock抑止の修正手順に従う。
+
+```sh
+~/.local/bin/clime doctor
+```
+
+典型的には `input` グループへの追加と `/dev/uinput` 用udevルールが必要になる。doctorは実行するコマンドとルール内容を表示する。グループを変更した場合はログアウト/ログイン後に再度doctorを実行する。GNOME以外のWayland環境では、デスクトップまたはコンポジタの設定でCaps Lockを無効化する。
+
+### 3. 自動起動を登録する
+
+doctorが `Result: OK` を表示してから、固定配置したバイナリで登録する。
+
+```sh
+clime install-autostart
+```
+
+Windowsで固定配置先をPATHに追加していない場合はフルパスで実行する。登録解除は `clime uninstall-autostart`。更新時にバイナリのパスを変えた場合は、旧バイナリで登録解除してから新バイナリで再登録する。
+
+---
+
 ## 1. 動作仕様
 
 ### 1.1 基本動作
