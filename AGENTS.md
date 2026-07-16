@@ -59,7 +59,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | M1 core層 | 完了 | Engine・CompositionTracker・確定キー解決・シナリオテスト |
 | M2 Windows | 完了 | フック・IME判定・キー注入・自動起動・doctor |
 | M3 macOS | 完了 | hidutil・CGEventTap・TIS・キー注入・自動起動・doctor |
-| M4 Linux | 未着手 | |
+| M4 Linux | 完了 | evdev・uinput・fcitx5/IBus・自動起動・doctor |
 | M5 リリース整備 | 完了 | release workflow・doctor案内・インストール手順・CHANGELOG |
 
 ---
