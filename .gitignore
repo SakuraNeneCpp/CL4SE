@@ -3,4 +3,5 @@
 .DS_Store
 .idea/
 .vscode/
-
+/ime-probe.txt
+/ime-focus-probe.txt

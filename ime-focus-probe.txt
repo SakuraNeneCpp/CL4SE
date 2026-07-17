@@ -1,1 +1,0 @@
-gotInfo=True active=0x270594 focus=0x1B0C24 caret=0x1B0C24 ime=0x140B30 delivered=1 open=1 error=0
