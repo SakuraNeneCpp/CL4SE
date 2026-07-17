@@ -7,6 +7,7 @@ use std::{
     any::Any,
     env,
     ffi::c_void,
+    os::windows::process::CommandExt,
     process::Command,
     sync::{
         atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
@@ -23,8 +24,8 @@ use windows::{
         Foundation::{CloseHandle, HANDLE, LPARAM, WPARAM},
         System::{
             Console::{
-                SetConsoleCtrlHandler, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT, CTRL_C_EVENT,
-                CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT,
+                GetConsoleWindow, SetConsoleCtrlHandler, CTRL_BREAK_EVENT, CTRL_CLOSE_EVENT,
+                CTRL_C_EVENT, CTRL_LOGOFF_EVENT, CTRL_SHUTDOWN_EVENT,
             },
             Threading::{CreateEventW, GetCurrentThreadId, SetEvent, WaitForSingleObject},
         },
@@ -37,9 +38,9 @@ use windows::{
 
 use crate::{
     config::Config,
-    control::{RestartRequest, RestartWatcher},
+    control::{ControlAction, ControlRequests, ControlWatcher},
     core::{Decision, Engine, ImeGuess, Platform},
-    platform::{Autostart, ImeStateProvider, KeyInjector},
+    platform::{Autostart, BackgroundProcess, ImeStateProvider, KeyInjector, RunOutcome},
 };
 
 use self::{
@@ -51,11 +52,14 @@ use self::{
 
 const EVENT_QUEUE_CAPACITY: usize = 1024;
 const WORKER_POLL_INTERVAL: Duration = Duration::from_millis(1);
+const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 static HOOK_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 static CLEANUP_EVENT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static CONSOLE_STOP_REQUESTED: AtomicBool = AtomicBool::new(false);
 const CONSOLE_CLEANUP_WAIT_MS: u32 = 4_000;
 
-pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
+pub(super) fn run(config: &Config, control: &ControlRequests) -> Result<RunOutcome> {
     let mut message = MSG::default();
     // SAFETY: message points to valid storage. PM_NOREMOVE creates this thread's
     // message queue without removing or dispatching any message.
@@ -63,40 +67,60 @@ pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     // SAFETY: GetCurrentThreadId has no preconditions.
     let hook_thread_id = unsafe { GetCurrentThreadId() };
 
-    let event_queue = Arc::new(EventQueue::new(EVENT_QUEUE_CAPACITY));
-    hooks::set_event_queue(Arc::clone(&event_queue))?;
-    let console = ConsoleCtrlGuard::install(hook_thread_id)?;
+    let event_queue = hooks::shared_event_queue(EVENT_QUEUE_CAPACITY);
+    CONSOLE_STOP_REQUESTED.store(false, Ordering::Release);
+    let console = if console_available() {
+        Some(ConsoleCtrlGuard::install(hook_thread_id)?)
+    } else {
+        log::debug!("no Windows console attached; stop is available through `cl4se stop`");
+        None
+    };
     let worker = WorkerGuard::start(
         config.clone(),
         event_queue,
         hook_thread_id,
-        restart.watcher(),
+        control.watcher(),
     )?;
     let hooks = WindowsHooks::install()?;
     let capture = CaptureGuard::enable();
 
     log::info!("Windows hooks installed; CL4SE is running");
     let loop_result = message_loop();
+    let console_stop_requested = CONSOLE_STOP_REQUESTED.load(Ordering::Acquire);
 
     // Disable callbacks first, then unhook, then stop and join the worker. The
     // same reverse order is guaranteed automatically if unwinding occurs.
     drop(capture);
     drop(hooks);
     let worker_result = worker.finish();
-    console.signal_cleanup();
+    if let Some(console) = console.as_ref() {
+        console.signal_cleanup();
+    }
     drop(console);
     log::info!("Windows hooks removed; CL4SE stopped");
 
-    loop_result.and(worker_result)
+    loop_result.and(worker_result)?;
+    let stop_pending = control.stop_pending()?;
+    if !console_stop_requested && !stop_pending && control.restart_pending()? {
+        Ok(RunOutcome::RestartRequested)
+    } else {
+        Ok(RunOutcome::Stopped)
+    }
 }
 
-pub(super) fn restart_process() -> Result<()> {
-    let executable = env::current_exe().context("failed to locate cl4se executable for restart")?;
-    Command::new(executable)
-        .arg("run")
+pub(super) fn start_background() -> Result<BackgroundProcess> {
+    let executable = env::current_exe().context("failed to locate cl4se executable")?;
+    let mut command = Command::new(executable);
+    command.arg("run");
+    let log_path = super::configure_background_command(&mut command)?;
+    let child = command
+        .creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW)
         .spawn()
-        .context("failed to restart CL4SE on Windows")?;
-    Ok(())
+        .context("failed to start CL4SE in the background")?;
+    Ok(BackgroundProcess {
+        pid: child.id(),
+        log_path,
+    })
 }
 
 pub(super) fn install_autostart() -> Result<()> {
@@ -205,7 +229,7 @@ impl WorkerGuard {
         config: Config,
         event_queue: Arc<EventQueue>,
         hook_thread_id: u32,
-        restart: RestartWatcher,
+        control: ControlWatcher,
     ) -> Result<Self> {
         let shutdown = Arc::new(AtomicBool::new(false));
         let error = Arc::new(Mutex::new(None));
@@ -220,7 +244,7 @@ impl WorkerGuard {
                         event_queue,
                         &worker_shutdown,
                         hook_thread_id,
-                        restart,
+                        control,
                     )
                 }));
                 let failure = match outcome {
@@ -287,7 +311,7 @@ fn worker_loop(
     event_queue: Arc<EventQueue>,
     shutdown: &AtomicBool,
     hook_thread_id: u32,
-    mut restart: RestartWatcher,
+    mut control: ControlWatcher,
 ) -> Result<()> {
     let _com = ComApartment::initialize()?;
     let mut provider = WindowsImeStateProvider::new();
@@ -297,13 +321,24 @@ fn worker_loop(
     let mut generation = hooks::current_generation();
 
     while !shutdown.load(Ordering::Acquire) {
-        if restart.poll() {
-            log::info!("configuration restart request received");
-            // SAFETY: hook_thread_id identifies the run thread whose message
-            // queue was created before this worker started.
-            unsafe { PostThreadMessageW(hook_thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) }
-                .context("failed to stop the Windows message loop for restart")?;
-            return Ok(());
+        match control.poll() {
+            Some(ControlAction::Stop) => {
+                log::info!("background stop request received");
+                // SAFETY: hook_thread_id identifies the run thread whose
+                // message queue was created before this worker started.
+                unsafe { PostThreadMessageW(hook_thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) }
+                    .context("failed to stop the Windows message loop")?;
+                return Ok(());
+            }
+            Some(ControlAction::Restart) => {
+                log::info!("configuration restart request received");
+                // SAFETY: hook_thread_id identifies the run thread whose
+                // message queue was created before this worker started.
+                unsafe { PostThreadMessageW(hook_thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) }
+                    .context("failed to stop the Windows message loop for restart")?;
+                return Ok(());
+            }
+            None => {}
         }
 
         let Some(queued) = event_queue.pop() else {
@@ -347,6 +382,7 @@ impl ConsoleCtrlGuard {
         // manual-reset event is owned by this guard.
         let cleanup_event = unsafe { CreateEventW(None, true, false, None) }
             .context("failed to create console cleanup event")?;
+        CONSOLE_STOP_REQUESTED.store(false, Ordering::Release);
         CLEANUP_EVENT.store(cleanup_event.0, Ordering::Release);
         HOOK_THREAD_ID.store(thread_id, Ordering::Release);
         // SAFETY: console_ctrl_handler has the required system ABI and static
@@ -395,6 +431,7 @@ unsafe extern "system" fn console_ctrl_handler(control: u32) -> BOOL {
     ) {
         return BOOL(0);
     }
+    CONSOLE_STOP_REQUESTED.store(true, Ordering::Release);
     let thread_id = HOOK_THREAD_ID.load(Ordering::Acquire);
     if thread_id == 0 {
         return BOOL(0);
@@ -423,4 +460,10 @@ fn panic_message(payload: &(dyn Any + Send)) -> &str {
     } else {
         "non-string panic payload"
     }
+}
+
+fn console_available() -> bool {
+    // SAFETY: GetConsoleWindow has no preconditions and returns a borrowed HWND
+    // or null when this background process has no attached console.
+    !unsafe { GetConsoleWindow() }.0.is_null()
 }

@@ -1,8 +1,10 @@
-use anyhow::{Context, Result};
+use std::time::Duration;
+
+use anyhow::{bail, Context, Result};
 use cl4se::{
     config::{Config, IdleAction},
-    control::RestartRequest,
-    platform,
+    control::ControlRequests,
+    platform::{self, RunOutcome},
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -17,6 +19,10 @@ struct Cli {
 enum Command {
     /// Run CL4SE in the foreground.
     Run,
+    /// Start CL4SE in the background, or resume it after a stop.
+    Start,
+    /// Stop a background CL4SE instance after normal cleanup.
+    Stop,
     /// Register CL4SE to start at login.
     InstallAutostart,
     /// Remove CL4SE from login startup.
@@ -62,6 +68,8 @@ impl From<IdleActionArgument> for IdleAction {
 fn main() -> Result<()> {
     match Cli::parse().command {
         Command::Run => run(),
+        Command::Start => start(),
+        Command::Stop => stop(),
         Command::InstallAutostart => platform::install_autostart(),
         Command::UninstallAutostart => platform::uninstall_autostart(),
         Command::Doctor => platform::doctor(),
@@ -70,20 +78,70 @@ fn main() -> Result<()> {
 }
 
 fn run() -> Result<()> {
-    let restart = RestartRequest::new()?;
-    // A request left while CL4SE was stopped is already reflected in the
-    // persisted config and must not cause an immediate extra restart.
-    let _ = restart.take()?;
+    let control = ControlRequests::new()?;
+    // Requests left while CL4SE was stopped must not affect the next start.
+    control.clear_startup_requests()?;
     let config = Config::load()?;
     init_logging(&config)?;
-    log::info!("configuration loaded");
-    platform::run(&config, &restart)?;
+    let run_result = run_backend_loop(
+        config,
+        |config| platform::run(config, &control),
+        || {
+            let _ = control.complete_restart()?;
+            Config::load().context("failed to reload configuration for restart")
+        },
+    );
+    let stop_completion = control.complete_stop().map(|_| ());
+    run_result.and(stop_completion)
+}
 
-    if restart.take()? {
-        log::info!("restart requested; platform cleanup completed");
-        platform::restart_process()?;
+fn start() -> Result<()> {
+    let control = ControlRequests::new()?;
+    if control.probe_running(Duration::from_millis(750))? {
+        println!("CL4SE is already running in the background.");
+        return Ok(());
+    }
+
+    let process = platform::start_background()?;
+    if !control.probe_running(Duration::from_secs(5))? {
+        bail!(
+            "CL4SE background startup was not acknowledged; inspect {}",
+            process.log_path.display()
+        );
+    }
+
+    println!("CL4SE started in the background (PID {}).", process.pid);
+    println!("Log: {}", process.log_path.display());
+    Ok(())
+}
+
+fn stop() -> Result<()> {
+    let control = ControlRequests::new()?;
+    if control.stop_running(Duration::from_millis(750), Duration::from_secs(15))? {
+        println!("CL4SE stopped after cleanup completed.");
+    } else {
+        println!("CL4SE is not running.");
     }
     Ok(())
+}
+
+fn run_backend_loop<B, R>(mut config: Config, mut backend: B, mut reload: R) -> Result<()>
+where
+    B: FnMut(&Config) -> Result<RunOutcome>,
+    R: FnMut() -> Result<Config>,
+{
+    loop {
+        log::info!("configuration loaded");
+        match backend(&config)? {
+            RunOutcome::Stopped => return Ok(()),
+            RunOutcome::RestartRequested => {
+                log::info!(
+                    "restart requested; platform cleanup completed; reinitializing in the current process"
+                );
+                config = reload()?;
+            }
+        }
+    }
 }
 
 fn setting(command: SettingCommand) -> Result<()> {
@@ -105,7 +163,7 @@ fn setting(command: SettingCommand) -> Result<()> {
 
             config.general.idle_action = action;
             let path = config.save()?;
-            RestartRequest::new()?.request()?;
+            ControlRequests::new()?.request_restart()?;
             println!("Updated {}", path.display());
             println!("idle_action = \"{}\"", action.as_str());
             println!(
@@ -152,5 +210,47 @@ mod tests {
                 command: SettingCommand::Show
             }
         ));
+    }
+
+    #[test]
+    fn background_start_and_stop_commands_parse() {
+        assert!(matches!(
+            Cli::try_parse_from(["cl4se", "start"])
+                .expect("start should parse")
+                .command,
+            Command::Start
+        ));
+        assert!(matches!(
+            Cli::try_parse_from(["cl4se", "stop"])
+                .expect("stop should parse")
+                .command,
+            Command::Stop
+        ));
+    }
+
+    #[test]
+    fn restart_reloads_config_without_leaving_the_foreground_process() {
+        let initial = Config::default();
+        let mut updated = Config::default();
+        updated.general.idle_action = IdleAction::ShiftEnter;
+        let mut observed = Vec::new();
+        let mut runs = 0;
+
+        run_backend_loop(
+            initial,
+            |config| {
+                observed.push(config.general.idle_action);
+                runs += 1;
+                Ok(if runs == 1 {
+                    RunOutcome::RestartRequested
+                } else {
+                    RunOutcome::Stopped
+                })
+            },
+            || Ok(updated.clone()),
+        )
+        .expect("in-process restart loop should finish");
+
+        assert_eq!(observed, vec![IdleAction::None, IdleAction::ShiftEnter]);
     }
 }

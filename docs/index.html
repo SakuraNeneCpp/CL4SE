@@ -678,6 +678,59 @@
         font-weight: 900;
       }
 
+      .setting-default {
+        flex: 0 0 auto;
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--ink);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .setting-list {
+        display: grid;
+      }
+
+      .setting-row {
+        display: grid;
+        grid-template-columns: minmax(160px, 0.4fr) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+      }
+
+      .setting-row + .setting-row {
+        border-top: 1px solid var(--line);
+      }
+
+      .setting-label {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .setting-label small {
+        color: var(--ink-soft);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .setting-command {
+        display: block;
+        min-width: 0;
+        padding: 9px 11px;
+        overflow-x: auto;
+        border-radius: 8px;
+        color: #dffef8;
+        background: #122126;
+        font-family: var(--mono);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
       .copy-button {
         padding: 6px 10px;
         border: 1px solid var(--ink);
@@ -889,6 +942,20 @@
         pre {
           font-size: 12px;
         }
+
+        .setting-row {
+          grid-template-columns: minmax(0, 1fr) auto;
+        }
+
+        .setting-command {
+          grid-column: 1 / -1;
+          grid-row: 2;
+        }
+
+        .setting-row > .copy-button {
+          grid-column: 2;
+          grid-row: 1;
+        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -931,8 +998,7 @@
         <div>
           <p class="eyebrow">v1.0.0 · Windows / macOS / Linux</p>
           <h1>
-            Enterで送信、
-            <span class="headline-accent">Caps Lockで変換確定。</span>
+            <span class="headline-accent">Caps Lockで  変換確定 / 改行</span>
           </h1>
           <p class="hero-copy">
             CL4SE (Caps Lock for Safe Enter) は、Caps Lockキーの挙動を日本語IMEの変換確定で上書きする常駐ツールです。
@@ -962,7 +1028,7 @@
           </div>
           <div class="composition-box">
             <p class="composition-label">PREEDIT</p>
-            <p class="composition-text">にほんご</p>
+            <p class="composition-text">日本語</p>
           </div>
           <div class="key-flow">
             <div class="caps-key">
@@ -1019,7 +1085,7 @@
           <div>
             <p class="section-kicker">Fail-safe by design</p>
             <h2 id="safety-heading" class="section-heading">
-              迷ったら、押さない。
+              フェイルセーフ設計
             </h2>
           </div>
           <ul class="decision-list">
@@ -1143,17 +1209,59 @@
               <div class="command-stack">
                 <article class="command-card">
                   <div class="command-head">
-                    <span class="command-title">インストール + スタートアップ登録 + 起動</span>
+                    <span class="command-title">導入 : インストール + スタートアップ登録 + 起動</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-win-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path $e)) { Invoke-WebRequest "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-windows-x86_64.exe" -OutFile $e }; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CL4SE doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CL4SE autostart setup failed" }; if (-not (Get-Process cl4se -ErrorAction SilentlyContinue)) { Start-Process -WindowStyle Hidden -FilePath $e -ArgumentList "run" }</code></pre>
+                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path $e)) { Invoke-WebRequest "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-windows-x86_64.exe" -OutFile $e }; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CL4SE doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CL4SE autostart setup failed" }; &amp; $e start; if ($LASTEXITCODE -ne 0) { throw "CL4SE background start failed" }</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を停止</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-win-stop">コピー</button>
+                  </div>
+                  <pre><code id="cmd-win-stop">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" stop</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を開始・再開</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-win-start">コピー</button>
+                  </div>
+                  <pre><code id="cmd-win-start">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" start</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">非変換時（idle時）のCaps Lock動作</span>
+                    <span class="setting-default">既定: OFF</span>
+                  </div>
+                  <div class="setting-list">
+                    <div class="setting-row">
+                      <span class="setting-label">現在の設定を表示</span>
+                      <code class="setting-command" id="cmd-win-setting-show">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" setting show</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-win-setting-show">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をON<small>Shift+Enterを注入</small></span>
+                      <code class="setting-command" id="cmd-win-setting-shift-enter">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" setting idle-action shift-enter</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-win-setting-shift-enter">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をOFF<small>何も注入しない（既定）</small></span>
+                      <code class="setting-command" id="cmd-win-setting-none">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" setting idle-action none</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-win-setting-none">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">本来のCaps Lock動作<small>Caps Lockをトグル</small></span>
+                      <code class="setting-command" id="cmd-win-setting-capslock">&amp; "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" setting idle-action capslock</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-win-setting-capslock">コピー</button>
+                    </div>
+                  </div>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-win-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-win-uninstall">$d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; if (Test-Path $e) { &amp; $e uninstall-autostart }; Get-Process cl4se -ErrorAction SilentlyContinue | Stop-Process; Remove-Item -LiteralPath $e -ErrorAction SilentlyContinue; Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue</code></pre>
+                  <pre><code id="cmd-win-uninstall">$d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; if (Test-Path $e) { &amp; $e stop; &amp; $e uninstall-autostart }; Remove-Item -LiteralPath $e -ErrorAction SilentlyContinue; Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue</code></pre>
                 </article>
               </div>
               <!-- <p class="panel-note">
@@ -1179,17 +1287,59 @@
               <div class="command-stack">
                 <article class="command-card">
                   <div class="command-head">
-                    <span class="command-title">導入 — 貼り付けるのはこの一行だけ</span>
+                    <span class="command-title">導入</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-mac-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CL4SE"; e="$d/cl4se"; mkdir -p "$d" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-macos-universal" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" run &gt;/tmp/cl4se-setup.log 2&gt;&amp;1 &amp; p=$!; sleep 3; kill -INT "$p" 2&gt;/dev/null || true; wait "$p" 2&gt;/dev/null || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart</code></pre>
+                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CL4SE"; e="$d/cl4se"; mkdir -p "$d" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-macos-universal" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" start || true; sleep 3; "$e" stop || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart &amp;&amp; "$e" start</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を停止</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-mac-stop">コピー</button>
+                  </div>
+                  <pre><code id="cmd-mac-stop">"$HOME/Applications/CL4SE/cl4se" stop</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を開始・再開</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-mac-start">コピー</button>
+                  </div>
+                  <pre><code id="cmd-mac-start">"$HOME/Applications/CL4SE/cl4se" start</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">非変換時（idle時）のCaps Lock動作</span>
+                    <span class="setting-default">既定: OFF</span>
+                  </div>
+                  <div class="setting-list">
+                    <div class="setting-row">
+                      <span class="setting-label">現在の設定を表示</span>
+                      <code class="setting-command" id="cmd-mac-setting-show">"$HOME/Applications/CL4SE/cl4se" setting show</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-mac-setting-show">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をON<small>Shift+Enterを注入</small></span>
+                      <code class="setting-command" id="cmd-mac-setting-shift-enter">"$HOME/Applications/CL4SE/cl4se" setting idle-action shift-enter</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-mac-setting-shift-enter">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をOFF<small>何も注入しない（既定）</small></span>
+                      <code class="setting-command" id="cmd-mac-setting-none">"$HOME/Applications/CL4SE/cl4se" setting idle-action none</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-mac-setting-none">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">本来のCaps Lock動作<small>Caps Lockをトグル</small></span>
+                      <code class="setting-command" id="cmd-mac-setting-capslock">"$HOME/Applications/CL4SE/cl4se" setting idle-action capslock</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-mac-setting-capslock">コピー</button>
+                    </div>
+                  </div>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-mac-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-mac-uninstall">e="$HOME/Applications/CL4SE/cl4se"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x cl4se 2&gt;/dev/null || true; rm -f "$e"; rmdir "$HOME/Applications/CL4SE" 2&gt;/dev/null || true</code></pre>
+                  <pre><code id="cmd-mac-uninstall">e="$HOME/Applications/CL4SE/cl4se"; [ ! -x "$e" ] || { "$e" stop; "$e" uninstall-autostart; }; rm -f "$e"; rmdir "$HOME/Applications/CL4SE" 2&gt;/dev/null || true</code></pre>
                 </article>
               </div>
               <p class="panel-note">
@@ -1215,17 +1365,59 @@
               <div class="command-stack">
                 <article class="command-card">
                   <div class="command-head">
-                    <span class="command-title">導入 — 貼り付けるのはこの一行だけ</span>
+                    <span class="command-title">導入</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-linux-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-linux-x86_64" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop cl4se.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; mkdir -p "$HOME/.local/state" &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x cl4se &gt;/dev/null || sg input -c "nohup '$e' run &gt;'$HOME/.local/state/cl4se.log' 2&gt;&amp;1 &amp;"; }; else "$e" uninstall-autostart; false; fi</code></pre>
+                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-linux-x86_64" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop cl4se.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x cl4se &gt;/dev/null || sg input -c "'$e' start"; }; else "$e" uninstall-autostart; false; fi</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を停止</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-linux-stop">コピー</button>
+                  </div>
+                  <pre><code id="cmd-linux-stop">"$HOME/.local/bin/cl4se" stop</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">バックグラウンド実行を開始・再開</span>
+                    <button class="copy-button" type="button" data-copy-target="cmd-linux-start">コピー</button>
+                  </div>
+                  <pre><code id="cmd-linux-start">"$HOME/.local/bin/cl4se" start</code></pre>
+                </article>
+                <article class="command-card">
+                  <div class="command-head">
+                    <span class="command-title">非変換時（idle時）のCaps Lock動作</span>
+                    <span class="setting-default">既定: OFF</span>
+                  </div>
+                  <div class="setting-list">
+                    <div class="setting-row">
+                      <span class="setting-label">現在の設定を表示</span>
+                      <code class="setting-command" id="cmd-linux-setting-show">"$HOME/.local/bin/cl4se" setting show</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-linux-setting-show">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をON<small>Shift+Enterを注入</small></span>
+                      <code class="setting-command" id="cmd-linux-setting-shift-enter">"$HOME/.local/bin/cl4se" setting idle-action shift-enter</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-linux-setting-shift-enter">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">安全改行をOFF<small>何も注入しない（既定）</small></span>
+                      <code class="setting-command" id="cmd-linux-setting-none">"$HOME/.local/bin/cl4se" setting idle-action none</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-linux-setting-none">コピー</button>
+                    </div>
+                    <div class="setting-row">
+                      <span class="setting-label">本来のCaps Lock動作<small>Caps Lockをトグル</small></span>
+                      <code class="setting-command" id="cmd-linux-setting-capslock">"$HOME/.local/bin/cl4se" setting idle-action capslock</code>
+                      <button class="copy-button" type="button" data-copy-target="cmd-linux-setting-capslock">コピー</button>
+                    </div>
+                  </div>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-linux-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-linux-uninstall">e="$HOME/.local/bin/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x cl4se 2&gt;/dev/null || true; rm -f "$e"; if [ -f "$s/managed-uinput-rule" ]; then sudo rm -f "$r" &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput; rm -f "$s/managed-uinput-rule"; fi; if [ -f "$s/managed-input-group" ]; then sudo gpasswd -d "$USER" input &gt;/dev/null 2&gt;&amp;1 || true; rm -f "$s/managed-input-group"; fi; rmdir "$s" 2&gt;/dev/null || true</code></pre>
+                  <pre><code id="cmd-linux-uninstall">e="$HOME/.local/bin/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; [ ! -x "$e" ] || { "$e" stop; "$e" uninstall-autostart; }; rm -f "$e"; if [ -f "$s/managed-uinput-rule" ]; then sudo rm -f "$r" &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput; rm -f "$s/managed-uinput-rule"; fi; if [ -f "$s/managed-input-group" ]; then sudo gpasswd -d "$USER" input &gt;/dev/null 2&gt;&amp;1 || true; rm -f "$s/managed-input-group"; fi; rmdir "$s" 2&gt;/dev/null || true</code></pre>
                 </article>
               </div>
               <p class="panel-note">
@@ -1243,7 +1435,7 @@
             </div>
           </div>
           <p class="panel-note">
-            Shift+Enterによる安全改行は初期状態ではOFFです。<code>cl4se setting idle-action shift-enter</code> で有効、<code>cl4se setting idle-action none</code> で無効にでき、実行中のCL4SEは安全に自動再起動します。利用するチャットアプリでShift+Enterが「送信せず改行」になることを確認してから有効にしてください。
+            idle時の動作は、各OS欄の設定コマンドから変更できます。Shift+Enterによる安全改行は初期状態ではOFFです。実行中に変更するとバックグラウンド状態のまま安全に再初期化します。IME状態が不明な場合は設定にかかわらず何も注入しません。利用するチャットアプリでShift+Enterが「送信せず改行」になることを確認してから有効にしてください。
           </p>
         </div>
       </section>

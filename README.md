@@ -65,9 +65,10 @@ doctorが `Result: OK` を表示してから、固定配置したバイナリで
 
 ```sh
 cl4se install-autostart
+cl4se start
 ```
 
-Windowsで固定配置先をPATHに追加していない場合はフルパスで実行する。登録解除は `cl4se uninstall-autostart`。更新時にバイナリのパスを変えた場合は、旧バイナリで登録解除してから新バイナリで再登録する。
+`cl4se start` はバックグラウンドで起動し、すでに実行中なら重複起動しない。停止は `cl4se stop`、停止後の再開も同じ `cl4se start` を使う。Windowsで固定配置先をPATHに追加していない場合はフルパスで実行する。登録解除は `cl4se uninstall-autostart`。更新時にバイナリのパスを変えた場合は、旧バイナリで登録解除してから新バイナリで再登録する。
 
 ---
 
@@ -192,7 +193,7 @@ cl4se setting idle-action none         # 安全改行をOFF
 cl4se setting idle-action capslock     # 非変換中はCapsLockトグル
 ```
 
-再起動要求を受けたプロセスは通常の終了と同じクリーンアップを完了してから再起動する。macOS/Linuxではプロセスを`exec`で置換し、Windowsではフック解除後に新しい`cl4se run`プロセスを起動する。
+再起動要求を受けた常駐プロセスは、通常の終了と同じクリーンアップを完了してから、同じプロセス内で設定を再読込し、OSバックエンドを再初期化する。`cl4se start` で起動した場合も設定変更後のバックグラウンド状態を維持し、`cl4se stop` で安全に停止できる。
 
 ### 1.6 CLI
 
@@ -200,7 +201,9 @@ cl4se setting idle-action capslock     # 非変換中はCapsLockトグル
 
 | コマンド | 動作 |
 |---|---|
-| `cl4se run` | フォアグラウンドで常駐実行(ログは stderr、`RUST_LOG` で上書き可) |
+| `cl4se run` | 開発・診断用にフォアグラウンドで常駐実行(ログは stderr、`RUST_LOG` で上書き可) |
+| `cl4se start` | CL4SEをバックグラウンドで起動。停止後の再開にも使用し、実行中なら何もしない |
+| `cl4se stop` | 実行中インスタンスへ停止要求を送り、クリーンアップ完了まで待つ |
 | `cl4se install-autostart` | ログイン時自動起動を登録(§3 各OS欄) |
 | `cl4se uninstall-autostart` | 自動起動を解除 |
 | `cl4se doctor` | 権限・依存・IME検出可否を診断して人間向けに表示。異常時は終了コード非0 |
@@ -235,7 +238,7 @@ cl4se/
 ├── src/
 │   ├── main.rs              # CLIエントリ (clap)
 │   ├── config.rs            # 設定ロード (serde + toml)
-│   ├── control.rs           # CLIから常駐プロセスへの安全な再起動要求
+│   ├── control.rs           # 起動確認・停止・設定再読込のプロセス間制御
 │   ├── core/
 │   │   ├── mod.rs           # Engine: 観測イベント → Decision
 │   │   └── tracker.rs       # CompositionTracker (§1.4 状態機械)
@@ -430,7 +433,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | T7 | `cl4se install-autostart` → 再ログイン | 自動起動している。`uninstall-autostart` で解除される |
 | T8 | プロセスをkill → キーボードが完全に正常に戻る | 残留リマップ・フックなし(macOSは `doctor` で復元確認) |
 | T9 | `RUST_LOG=debug` で変換中に Caps Lock(MS-IME / Google日本語入力 / mozc 環境と、許可リスト外のIME環境) | ログ上の解決キーが §1.3 の許可リスト通り(前者は Ctrl+M、後者と macOS は Enter)。いずれも確定に成功する |
-| T10 | 実行中に `cl4se setting idle-action shift-enter` を実行し、(a)IMEオン・非変換中、(b)IMEオフ、(c)IME状態を取得できないアプリでCaps Lock。終了後は `cl4se setting idle-action none` | フック・リマップ・uinputを安全に再初期化して自動再起動する。(a)(b)はShift+Enterとして改行され、送信されない。(c)は何も起きない。注入されたShift/Enterが押下状態のまま残らず、1回の押下で1回だけ動作する |
+| T10 | `cl4se start` で起動し、実行中に `cl4se setting idle-action shift-enter` を実行。(a)IMEオン・非変換中、(b)IMEオフ、(c)IME状態を取得できないアプリでCaps Lock。終了後は `cl4se setting idle-action none` → `cl4se stop` → `cl4se start` | 同じPID・バックグラウンドプロセスのままフック・リマップ・uinputを安全に再初期化する。(a)(b)はShift+Enterとして改行され、送信されない。(c)は何も起きない。`stop` はクリーンアップ完了後に戻り、以後のキー入力でログが増えない。再度 `start` するとバックグラウンドで動作を再開する |
 
 対象IME: MS-IME / Google日本語入力(Windows)、日本語IM・Google日本語入力(macOS)、fcitx5-mozc / ibus-mozc(Linux)。
 

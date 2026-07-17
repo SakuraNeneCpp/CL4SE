@@ -122,7 +122,10 @@ fn launch_agent_plist(executable: &str) -> String {
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
-  <true/>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
 </dict>
 </plist>
 "#
@@ -150,7 +153,9 @@ mod tests {
         assert!(plist.contains("<string>/Applications/CL4SE &amp; Tools/cl4se</string>"));
         assert!(plist.contains("<string>run</string>"));
         assert!(plist.contains("<key>RunAtLoad</key>\n  <true/>"));
-        assert!(plist.contains("<key>KeepAlive</key>\n  <true/>"));
+        assert!(plist.contains(
+            "<key>KeepAlive</key>\n  <dict>\n    <key>SuccessfulExit</key>\n    <false/>"
+        ));
     }
 
     #[test]

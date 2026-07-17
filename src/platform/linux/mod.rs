@@ -12,9 +12,9 @@ use anyhow::{bail, Context, Result};
 
 use crate::{
     config::Config,
-    control::RestartRequest,
+    control::{ControlAction, ControlRequests},
     core::{Decision, Engine, Platform},
-    platform::{Autostart, KeyInjector},
+    platform::{Autostart, BackgroundProcess, KeyInjector, RunOutcome},
 };
 
 use self::{
@@ -24,7 +24,7 @@ use self::{
 
 const POLL_INTERVAL: Duration = Duration::from_millis(5);
 
-pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
+pub(super) fn run(config: &Config, control: &ControlRequests) -> Result<RunOutcome> {
     if let Err(error) = xkb::reapply_if_managed() {
         log::warn!(
             "failed to reapply managed caps:none setting: {error:#}; physical Caps Lock may toggle"
@@ -37,13 +37,22 @@ pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     let mut provider = LinuxImeStateProvider::new();
     let mut engine = Engine::new(config, Platform::Linux);
     let clock = std::time::Instant::now();
-    let mut restart = restart.watcher();
+    let mut control = control.watcher();
+    let mut outcome = RunOutcome::Stopped;
 
     log::info!("Linux evdev monitor and uinput injector initialized; CL4SE is running");
     while !SignalGuard::stop_requested() {
-        if restart.poll() {
-            log::info!("configuration restart request received");
-            break;
+        match control.poll() {
+            Some(ControlAction::Stop) => {
+                log::info!("background stop request received");
+                break;
+            }
+            Some(ControlAction::Restart) => {
+                log::info!("configuration restart request received");
+                outcome = RunOutcome::RestartRequested;
+                break;
+            }
+            None => {}
         }
 
         let batch = monitor.poll();
@@ -85,13 +94,21 @@ pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     // errors, and panic unwinding all destroy it before platform::run catches
     // a panic at the application boundary.
     log::info!("event loop stopped; dropping uinput device and evdev handles");
-    Ok(())
+    Ok(outcome)
 }
 
-pub(super) fn restart_process() -> Result<()> {
-    let executable = env::current_exe().context("failed to locate the CL4SE executable")?;
-    let error = Command::new(executable).arg("run").exec();
-    Err(error).context("failed to replace the CL4SE process")
+pub(super) fn start_background() -> Result<BackgroundProcess> {
+    let executable = env::current_exe().context("failed to locate cl4se executable")?;
+    let mut command = Command::new(executable);
+    command.arg("run").process_group(0);
+    let log_path = super::configure_background_command(&mut command)?;
+    let child = command
+        .spawn()
+        .context("failed to start CL4SE in the background")?;
+    Ok(BackgroundProcess {
+        pid: child.id(),
+        log_path,
+    })
 }
 
 pub(super) fn install_autostart() -> Result<()> {

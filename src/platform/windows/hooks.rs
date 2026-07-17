@@ -45,10 +45,15 @@ static CAPS_LOCK_DOWN: AtomicBool = AtomicBool::new(false);
 static KEY_STATES: [AtomicBool; KEY_STATE_COUNT] =
     [const { AtomicBool::new(false) }; KEY_STATE_COUNT];
 
-pub(crate) fn set_event_queue(queue: Arc<EventQueue>) -> Result<()> {
-    EVENT_QUEUE
-        .set(queue)
-        .map_err(|_| anyhow!("Windows hook event queue was already initialized"))
+/// Returns the process-wide callback queue prepared for a new backend run.
+///
+/// This is called only after the previous capture guard, hooks, and consumer
+/// worker have all been destroyed. Draining here therefore preserves the SPSC
+/// contract while allowing configuration restarts in the same process.
+pub(crate) fn shared_event_queue(capacity: usize) -> Arc<EventQueue> {
+    let queue = Arc::clone(EVENT_QUEUE.get_or_init(|| Arc::new(EventQueue::new(capacity))));
+    queue.clear();
+    queue
 }
 
 pub(crate) fn current_generation() -> usize {
@@ -60,7 +65,9 @@ pub(crate) fn current_generation() -> usize {
 /// Windows dispatches all three installed callbacks on the hook thread: the
 /// low-level hooks target that thread, and WINEVENT_OUTOFCONTEXT queues events
 /// back to the SetWinEventHook caller's message loop. The worker is the sole
-/// consumer. These constraints make the lock-free SPSC indexes sound.
+/// consumer. Between backend runs, the run thread may drain the queue only
+/// after capture has stopped and the previous worker has joined. These
+/// constraints make the lock-free SPSC indexes sound.
 pub(crate) struct EventQueue {
     slots: Box<[UnsafeCell<MaybeUninit<QueuedEvent>>]>,
     head: AtomicUsize,
@@ -113,6 +120,10 @@ impl EventQueue {
         let event = unsafe { (*self.slots[head].get()).assume_init_read() };
         self.head.store(self.next(head), Ordering::Release);
         Some(event)
+    }
+
+    fn clear(&self) {
+        while self.pop().is_some() {}
     }
 
     fn next(&self, index: usize) -> usize {
@@ -481,5 +492,20 @@ mod tests {
         assert!(matches!(queue.pop(), Some(event) if event.generation == 1));
         assert!(matches!(queue.pop(), Some(event) if event.generation == 2));
         assert!(queue.pop().is_none());
+    }
+
+    #[test]
+    fn event_queue_can_be_cleared_and_reused_for_restart() {
+        let queue = EventQueue::new(1);
+        let event = QueuedEvent {
+            event: ObservedEvent::MouseClick,
+            generation: 1,
+        };
+
+        assert!(queue.push(event).is_ok());
+        queue.clear();
+        assert!(queue.pop().is_none());
+        assert!(queue.push(event).is_ok());
+        assert!(queue.pop().is_some());
     }
 }

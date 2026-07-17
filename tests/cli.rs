@@ -26,6 +26,19 @@ fn setting_help_lists_safe_idle_actions() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn help_lists_background_lifecycle_commands() -> Result<(), Box<dyn Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_cl4se"))
+        .arg("--help")
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    assert!(output.status.success());
+    assert!(stdout.contains("start"));
+    assert!(stdout.contains("stop"));
+    Ok(())
+}
+
+#[test]
 #[cfg(target_os = "linux")]
 fn doctor_runs_linux_diagnostics() -> Result<(), Box<dyn Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_cl4se"))

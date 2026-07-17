@@ -12,7 +12,7 @@ echo   Downloading CL4SE and enabling automatic startup...
 echo.
 
 :run_installer
-powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "if ($env:CL4SE_INSTALLER_DRY_RUN -ne '1') { $ErrorActionPreference='Stop'; $d=Join-Path $env:LOCALAPPDATA 'Programs\CL4SE'; $e=Join-Path $d 'cl4se.exe'; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path -LiteralPath $e)) { Invoke-WebRequest 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-windows-x86_64.exe' -OutFile $e }; & $e doctor; if ($LASTEXITCODE -ne 0) { throw 'CL4SE doctor failed' }; & $e install-autostart; if ($LASTEXITCODE -ne 0) { throw 'CL4SE autostart setup failed' }; if (-not (Get-Process cl4se -ErrorAction SilentlyContinue)) { Start-Process -WindowStyle Hidden -FilePath $e -ArgumentList 'run' } }"
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "if ($env:CL4SE_INSTALLER_DRY_RUN -ne '1') { $ErrorActionPreference='Stop'; $d=Join-Path $env:LOCALAPPDATA 'Programs\CL4SE'; $e=Join-Path $d 'cl4se.exe'; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path -LiteralPath $e)) { Invoke-WebRequest 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-windows-x86_64.exe' -OutFile $e }; & $e doctor; if ($LASTEXITCODE -ne 0) { throw 'CL4SE doctor failed' }; & $e install-autostart; if ($LASTEXITCODE -ne 0) { throw 'CL4SE autostart setup failed' }; & $e start; if ($LASTEXITCODE -ne 0) { throw 'CL4SE background start failed' } }"
 
 if errorlevel 1 goto installation_failed
 if /I "%CL4SE_INSTALLER_DRY_RUN%"=="1" exit /b 0

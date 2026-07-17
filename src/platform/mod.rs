@@ -1,9 +1,15 @@
 //! Platform abstraction and OS-specific dispatch.
 
-use anyhow::Result;
+use std::{
+    fs::{self, OpenOptions},
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
-use crate::config::Config;
-use crate::control::RestartRequest;
+use anyhow::{Context, Result};
+
+use crate::config::{config_directory, Config};
+use crate::control::ControlRequests;
 use crate::core::Engine;
 pub use crate::core::{CommitKey, Decision, ImeGuess, ImeSnapshot, ObservedEvent, Platform};
 
@@ -50,15 +56,27 @@ pub trait Autostart {
     fn uninstall(&self) -> anyhow::Result<()>;
 }
 
-pub fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunOutcome {
+    Stopped,
+    RestartRequested,
+}
+
+#[derive(Debug)]
+pub struct BackgroundProcess {
+    pub pid: u32,
+    pub log_path: PathBuf,
+}
+
+pub fn run(config: &Config, control: &ControlRequests) -> Result<RunOutcome> {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        backend::run(config, restart)
+        backend::run(config, control)
     }))
     .map_err(|_| anyhow::anyhow!("platform backend panicked after cleanup"))?
 }
 
-pub fn restart_process() -> Result<()> {
-    backend::restart_process()
+pub fn start_background() -> Result<BackgroundProcess> {
+    backend::start_background()
 }
 
 pub fn install_autostart() -> Result<()> {
@@ -71,4 +89,28 @@ pub fn uninstall_autostart() -> Result<()> {
 
 pub fn doctor() -> Result<()> {
     backend::doctor()
+}
+
+fn configure_background_command(command: &mut Command) -> Result<PathBuf> {
+    let directory = config_directory()?;
+    fs::create_dir_all(&directory).with_context(|| {
+        format!(
+            "failed to create CL4SE background log directory: {}",
+            directory.display()
+        )
+    })?;
+    let log_path = directory.join("cl4se.log");
+    let stderr = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+        .with_context(|| format!("failed to open background log: {}", log_path.display()))?;
+    let stdout = stderr
+        .try_clone()
+        .with_context(|| format!("failed to clone background log: {}", log_path.display()))?;
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(stdout))
+        .stderr(Stdio::from(stderr));
+    Ok(log_path)
 }
