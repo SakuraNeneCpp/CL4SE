@@ -5,24 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="CLIMEは、物理Caps Lockキーで日本語IMEの変換を確定するWindows・macOS・Linux対応の常駐CLIツールです。"
+      content="CL4SE (Caps Lock for Safe Enter) は、物理Caps Lockキーで日本語IMEの変換を確定するWindows・macOS・Linux対応の常駐CLIツールです。"
     >
     <meta name="theme-color" content="#122126">
     <meta property="og:type" content="website">
-    <meta property="og:title" content="CLIME — Enterを送信に、Caps Lockを確定に。">
+    <meta property="og:title" content="CL4SE — Enterを送信に、Caps Lockを確定に。">
     <meta
       property="og:description"
       content="誤送信を減らすための、フェイルセーフなIME確定ツール。Windows・macOS・Linux対応。"
     >
     <meta
       property="og:url"
-      content="https://sakuranenecpp.github.io/CLIME_CapsLockIMEcommit/"
+      content="https://sakuranenecpp.github.io/CL4SE/"
     >
     <link
       rel="canonical"
-      href="https://sakuranenecpp.github.io/CLIME_CapsLockIMEcommit/"
+      href="https://sakuranenecpp.github.io/CL4SE/"
     >
-    <title>CLIME — Caps LockでIME確定</title>
+    <title>CL4SE — Caps Lock for Safe Enter</title>
     <style>
       :root {
         color-scheme: light;
@@ -908,9 +908,9 @@
 
     <header class="site-header">
       <div class="shell nav">
-        <a class="brand" href="#top" aria-label="CLIME ホーム">
+        <a class="brand" href="#top" aria-label="CL4SE ホーム">
           <span class="brand-mark">CL</span>
-          CLIME
+          CL4SE
         </a>
         <nav class="nav-links" aria-label="メインナビゲーション">
           <a href="#why">魅力</a>
@@ -918,7 +918,7 @@
           <a href="#install">インストール</a>
           <a
             class="nav-github"
-            href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit"
+            href="https://github.com/SakuraNeneCpp/CL4SE"
             target="_blank"
             rel="noopener noreferrer"
           >GitHub ↗</a>
@@ -932,17 +932,17 @@
           <p class="eyebrow">v1.0.0 · Windows / macOS / Linux</p>
           <h1>
             Enterで送信、
-            <span class="headline-accent">Caps LockでIME変換確定。</span>
+            <span class="headline-accent">Caps Lockで変換確定。</span>
           </h1>
           <p class="hero-copy">
-            CLIMEは、Caps Lockキーの挙動を日本語IMEの変換確定で上書きする常駐ツールです。
+            CL4SE (Caps Lock for Safe Enter) は、Caps Lockキーの挙動を日本語IMEの変換確定で上書きする常駐ツールです。
             変換確定のつもりでEnterを押し、そのままメッセージを送ってしまう事故を減らします。
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#install">コマンドからインストール</a>
             <a
               class="button button-secondary os-download"
-              href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/tag/v1.0.0"
+              href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.0"
               target="_blank"
               rel="noopener noreferrer"
             >v1.0.0をダウンロード ↗</a>
@@ -955,14 +955,14 @@
           </div>
         </div>
 
-        <!-- <div class="hero-visual" aria-label="Caps LockでIME変換を確定するイメージ">
+        <div class="hero-visual" aria-label="Caps LockでIME変換を確定するイメージ">
           <div class="visual-topbar">
             <span><span class="status-dot"></span>IME composing</span>
-            <span>CLIME / ACTIVE</span>
+            <span>CL4SE / ACTIVE</span>
           </div>
           <div class="composition-box">
             <p class="composition-label">PREEDIT</p>
-            <p class="composition-text">ご確認ください</p>
+            <p class="composition-text">にほんご</p>
           </div>
           <div class="key-flow">
             <div class="caps-key">
@@ -975,17 +975,17 @@
               <small>NO MESSAGE SENT</small>
             </div>
           </div>
-        </div> -->
+        </div>
       </div>
 
       <section id="why">
         <div class="shell">
-          <p class="section-kicker">Why CLIME</p>
+          <p class="section-kicker">Why CL4SE</p>
           <h2 class="section-heading">誤送信を防ぎます</h2>
           <p class="section-lead">
             特に英語圏で開発されたアプリでは、しばしばメッセージの送信にEnterが割り当てられます。
             しかし日本語ではIMEの変換確定にもEnterが割り当てられ、これが誤送信の原因になります。
-            そこでCLIMEは使われていないCaps LockにIME確定を任せることで、誤送信を防止します。
+            そこでCL4SEは使われていないCaps LockにIME確定を任せることで、誤送信を防止します。
           </p>
 
           <div class="feature-grid">
@@ -1146,14 +1146,14 @@
                     <span class="command-title">インストール + スタートアップ登録 + 起動</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-win-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CLIME"; $e="$d\clime.exe"; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path $e)) { Invoke-WebRequest "https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/download/v1.0.0/clime-windows-x86_64.exe" -OutFile $e }; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CLIME doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CLIME autostart setup failed" }; if (-not (Get-Process clime -ErrorAction SilentlyContinue)) { Start-Process -WindowStyle Hidden -FilePath $e -ArgumentList "run" }</code></pre>
+                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; New-Item -ItemType Directory -Force $d | Out-Null; if (-not (Test-Path $e)) { Invoke-WebRequest "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-windows-x86_64.exe" -OutFile $e }; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CL4SE doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CL4SE autostart setup failed" }; if (-not (Get-Process cl4se -ErrorAction SilentlyContinue)) { Start-Process -WindowStyle Hidden -FilePath $e -ArgumentList "run" }</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-win-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-win-uninstall">$d="$env:LOCALAPPDATA\Programs\CLIME"; $e="$d\clime.exe"; if (Test-Path $e) { &amp; $e uninstall-autostart }; Get-Process clime -ErrorAction SilentlyContinue | Stop-Process; Remove-Item -LiteralPath $e -ErrorAction SilentlyContinue; Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue</code></pre>
+                  <pre><code id="cmd-win-uninstall">$d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; if (Test-Path $e) { &amp; $e uninstall-autostart }; Get-Process cl4se -ErrorAction SilentlyContinue | Stop-Process; Remove-Item -LiteralPath $e -ErrorAction SilentlyContinue; Remove-Item -LiteralPath $d -ErrorAction SilentlyContinue</code></pre>
                 </article>
               </div>
               <!-- <p class="panel-note">
@@ -1182,18 +1182,18 @@
                     <span class="command-title">導入 — 貼り付けるのはこの一行だけ</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-mac-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CLIME"; e="$d/clime"; mkdir -p "$d" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/download/v1.0.0/clime-macos-universal" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" run &gt;/tmp/clime-setup.log 2&gt;&amp;1 &amp; p=$!; sleep 3; kill -INT "$p" 2&gt;/dev/null || true; wait "$p" 2&gt;/dev/null || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart</code></pre>
+                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CL4SE"; e="$d/cl4se"; mkdir -p "$d" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-macos-universal" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" run &gt;/tmp/cl4se-setup.log 2&gt;&amp;1 &amp; p=$!; sleep 3; kill -INT "$p" 2&gt;/dev/null || true; wait "$p" 2&gt;/dev/null || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-mac-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-mac-uninstall">e="$HOME/Applications/CLIME/clime"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x clime 2&gt;/dev/null || true; rm -f "$e"; rmdir "$HOME/Applications/CLIME" 2&gt;/dev/null || true</code></pre>
+                  <pre><code id="cmd-mac-uninstall">e="$HOME/Applications/CL4SE/cl4se"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x cl4se 2&gt;/dev/null || true; rm -f "$e"; rmdir "$HOME/Applications/CL4SE" 2&gt;/dev/null || true</code></pre>
                 </article>
               </div>
               <p class="panel-note">
-                システム設定が開いた場合だけ、「入力監視」と「アクセシビリティ」でCLIMEをオンにしてください。この確認だけはmacOSが手動操作を必須にしています。登録後は自動で起動します。
+                システム設定が開いた場合だけ、「入力監視」と「アクセシビリティ」でCL4SEをオンにしてください。この確認だけはmacOSが手動操作を必須にしています。登録後は自動で起動します。
               </p>
             </div>
 
@@ -1218,14 +1218,14 @@
                     <span class="command-title">導入 — 貼り付けるのはこの一行だけ</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-linux-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/clime"; s="$HOME/.local/share/clime"; r="/etc/udev/rules.d/99-clime-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/download/v1.0.0/clime-linux-x86_64" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop clime.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; mkdir -p "$HOME/.local/state" &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x clime &gt;/dev/null || sg input -c "nohup '$e' run &gt;'$HOME/.local/state/clime.log' 2&gt;&amp;1 &amp;"; }; else "$e" uninstall-autostart; false; fi</code></pre>
+                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; { [ -x "$e" ] || { curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-linux-x86_64" -o "$e" &amp;&amp; chmod 755 "$e"; }; } &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop cl4se.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; mkdir -p "$HOME/.local/state" &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x cl4se &gt;/dev/null || sg input -c "nohup '$e' run &gt;'$HOME/.local/state/cl4se.log' 2&gt;&amp;1 &amp;"; }; else "$e" uninstall-autostart; false; fi</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
                     <span class="command-title">アンインストール</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-linux-uninstall">コピー</button>
                   </div>
-                  <pre><code id="cmd-linux-uninstall">e="$HOME/.local/bin/clime"; s="$HOME/.local/share/clime"; r="/etc/udev/rules.d/99-clime-uinput.rules"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x clime 2&gt;/dev/null || true; rm -f "$e"; if [ -f "$s/managed-uinput-rule" ]; then sudo rm -f "$r" &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput; rm -f "$s/managed-uinput-rule"; fi; if [ -f "$s/managed-input-group" ]; then sudo gpasswd -d "$USER" input &gt;/dev/null 2&gt;&amp;1 || true; rm -f "$s/managed-input-group"; fi; rmdir "$s" 2&gt;/dev/null || true</code></pre>
+                  <pre><code id="cmd-linux-uninstall">e="$HOME/.local/bin/cl4se"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; [ ! -x "$e" ] || "$e" uninstall-autostart; pkill -TERM -x cl4se 2&gt;/dev/null || true; rm -f "$e"; if [ -f "$s/managed-uinput-rule" ]; then sudo rm -f "$r" &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput; rm -f "$s/managed-uinput-rule"; fi; if [ -f "$s/managed-input-group" ]; then sudo gpasswd -d "$USER" input &gt;/dev/null 2&gt;&amp;1 || true; rm -f "$s/managed-input-group"; fi; rmdir "$s" 2&gt;/dev/null || true</code></pre>
                 </article>
               </div>
               <p class="panel-note">
@@ -1236,7 +1236,7 @@
             <div class="release-strip">
               <p>コマンドはv1.0.0固定です。更新時はReleaseページで最新版を確認してください。</p>
               <a
-                href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/tag/v1.0.0"
+                href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.0"
                 target="_blank"
                 rel="noopener noreferrer"
               >ReleaseとSHA256SUMSを見る ↗</a>
@@ -1256,7 +1256,7 @@
             <a class="button button-primary" href="#install">インストールする ↑</a>
             <a
               class="button button-secondary"
-              href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/blob/v1.0.0/README.md"
+              href="https://github.com/SakuraNeneCpp/CL4SE/blob/v1.0.0/README.md"
               target="_blank"
               rel="noopener noreferrer"
             >詳しい仕様を読む ↗</a>
@@ -1267,10 +1267,10 @@
 
     <footer>
       <div class="shell footer-row">
-        <span>© <span id="year"></span> CLIME</span>
+        <span>© <span id="year"></span> CL4SE</span>
         <div class="footer-links">
-          <a href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit">GitHub</a>
-          <a href="https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/tag/v1.0.0">Release v1.0.0</a>
+          <a href="https://github.com/SakuraNeneCpp/CL4SE">GitHub</a>
+          <a href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.0">Release v1.0.0</a>
           <a href="#top">ページ上部へ ↑</a>
         </div>
       </div>
@@ -1355,18 +1355,18 @@
         const downloads = {
           windows: {
             label: 'Windows版インストーラをダウンロード',
-            href: 'downloads/clime-windows-installer.cmd',
-            filename: 'clime-windows-installer.cmd',
-            note: 'ダウンロード後、clime-windows-installer.cmdをダブルクリックしてください。Windowsの確認が出た場合は、ファイル名を確認して「実行」を選びます。'
+            href: 'downloads/cl4se-windows-installer.cmd',
+            filename: 'cl4se-windows-installer.cmd',
+            note: 'ダウンロード後、cl4se-windows-installer.cmdをダブルクリックしてください。Windowsの確認が出た場合は、ファイル名を確認して「実行」を選びます。'
           },
           macos: {
             label: 'macOS版をダウンロード ↗',
-            href: 'https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/download/v1.0.0/clime-macos-universal',
+            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-macos-universal',
             note: 'かんたん導入は下のmacOS欄にある一行コマンドを使ってください。'
           },
           linux: {
             label: 'Linux版をダウンロード ↗',
-            href: 'https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases/download/v1.0.0/clime-linux-x86_64',
+            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.0/cl4se-linux-x86_64',
             note: 'かんたん導入は下のLinux欄にある一行コマンドを使ってください。'
           }
         };

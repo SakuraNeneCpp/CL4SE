@@ -42,7 +42,7 @@ pub struct ImeSnapshot {
 
 /// An event already classified by the platform interceptor.
 ///
-/// `self_injected` must only be set when CLIME's private injection marker
+/// `self_injected` must only be set when CL4SE's private injection marker
 /// matches. Generic events injected by other software are not trusted as ours.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObservedEvent {

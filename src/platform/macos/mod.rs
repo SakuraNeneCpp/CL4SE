@@ -59,14 +59,14 @@ pub(super) fn run(config: &Config) -> Result<()> {
     runtime.worker = Some(WorkerGuard::start(config.clone(), queue, run_loop)?);
     runtime.remap = Some(HidutilRemapGuard::install()?);
 
-    log::info!("Caps Lock mapped to F18; macOS event tap installed; CLIME is running");
+    log::info!("Caps Lock mapped to F18; macOS event tap installed; CL4SE is running");
     if !SignalGuard::stop_requested() {
         if let Some(event_tap) = runtime.event_tap.as_ref() {
             event_tap.run();
         }
     }
     let result = runtime.finish();
-    log::info!("macOS event tap removed and hidutil mapping restored; CLIME stopped");
+    log::info!("macOS event tap removed and hidutil mapping restored; CL4SE stopped");
     result
 }
 
@@ -79,7 +79,7 @@ pub(super) fn uninstall_autostart() -> Result<()> {
 }
 
 pub(super) fn doctor() -> Result<()> {
-    println!("CLIME doctor (macOS)");
+    println!("CL4SE doctor (macOS)");
     let mut has_error = false;
     let tcc = diagnostics::tcc_status();
     println!(
@@ -91,13 +91,13 @@ pub(super) fn doctor() -> Result<()> {
     if !tcc.input_monitoring || !tcc.accessibility || !tcc.event_posting {
         has_error = true;
         println!("Fix TCC permissions:");
-        println!("  1. Run `clime run` manually once, then stop it with Ctrl+C.");
+        println!("  1. Run `cl4se run` manually once, then stop it with Ctrl+C.");
         println!(
-            "  2. In System Settings > Privacy & Security, enable CLIME under Input Monitoring and Accessibility."
+            "  2. In System Settings > Privacy & Security, enable CL4SE under Input Monitoring and Accessibility."
         );
-        println!("  3. Rerun `clime doctor`; install autostart only after it reports OK.");
+        println!("  3. Rerun `cl4se doctor`; install autostart only after it reports OK.");
         println!(
-            "If the clime binary path changes, remove the old TCC entries and grant both permissions again."
+            "If the cl4se binary path changes, remove the old TCC entries and grant both permissions again."
         );
     }
 
@@ -115,15 +115,15 @@ pub(super) fn doctor() -> Result<()> {
         }
     }
 
-    match hidutil::clime_mapping_is_active() {
+    match hidutil::cl4se_mapping_is_active() {
         Ok(true) => match hidutil::restore_residual_mapping() {
-            Ok(()) => println!("hidutil mapping: residual CLIME mapping found and restored"),
+            Ok(()) => println!("hidutil mapping: residual CL4SE mapping found and restored"),
             Err(error) => {
                 has_error = true;
                 println!("hidutil mapping: ERROR restoring residual mapping: {error:#}");
             }
         },
-        Ok(false) => println!("hidutil mapping: OK (no residual CLIME mapping)"),
+        Ok(false) => println!("hidutil mapping: OK (no residual CL4SE mapping)"),
         Err(error) => {
             has_error = true;
             println!("hidutil mapping: ERROR: {error:#}");
@@ -140,14 +140,14 @@ pub(super) fn doctor() -> Result<()> {
         ),
     }
     println!(
-        "Runtime note: Terminal Secure Keyboard Entry disables event taps; turn it off while using CLIME."
+        "Runtime note: Terminal Secure Keyboard Entry disables event taps; turn it off while using CL4SE."
     );
 
     if has_error {
-        println!("Result: ERROR. Apply the fixes above, then rerun `clime doctor`.");
+        println!("Result: ERROR. Apply the fixes above, then rerun `cl4se doctor`.");
         bail!("macOS doctor found setup problems")
     } else {
-        println!("Result: OK. Next: run `clime install-autostart`.");
+        println!("Result: OK. Next: run `cl4se install-autostart`.");
         Ok(())
     }
 }
@@ -205,7 +205,7 @@ impl WorkerGuard {
         let worker_shutdown = Arc::clone(&shutdown);
         let worker_error = Arc::clone(&error);
         let handle = thread::Builder::new()
-            .name("clime-macos-worker".to_owned())
+            .name("cl4se-macos-worker".to_owned())
             .spawn(move || {
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     worker_loop(config, queue, &worker_shutdown, startup_tx)

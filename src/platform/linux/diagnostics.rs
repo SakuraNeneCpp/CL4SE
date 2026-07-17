@@ -113,7 +113,7 @@ pub(crate) fn build_report(
             has_error = true;
             lines.push("IME framework: ERROR fcitx5 and IBus are unavailable".to_owned());
             lines.push(
-                "Fix: install and start fcitx5 or IBus in this desktop session, then rerun `clime doctor`"
+                "Fix: install and start fcitx5 or IBus in this desktop session, then rerun `cl4se doctor`"
                     .to_owned(),
             );
         }
@@ -127,7 +127,7 @@ pub(crate) fn build_report(
         );
     } else if ime.snapshot.active == ImeGuess::Unknown {
         lines.push(
-            "IME query: WARN state is Unknown; CLIME will not inject (focus a text field and retry)"
+            "IME query: WARN state is Unknown; CL4SE will not inject (focus a text field and retry)"
                 .to_owned(),
         );
     }
@@ -160,11 +160,11 @@ pub(crate) fn build_report(
 
     if has_error {
         lines.push(
-            "Result: ERROR. Apply the fixes above, log out and back in if group membership changed, then rerun `clime doctor`."
+            "Result: ERROR. Apply the fixes above, log out and back in if group membership changed, then rerun `cl4se doctor`."
                 .to_owned(),
         );
     } else {
-        lines.push("Result: OK. Next: run `clime install-autostart`.".to_owned());
+        lines.push("Result: OK. Next: run `cl4se install-autostart`.".to_owned());
     }
 
     DoctorReport { lines, has_error }
@@ -218,7 +218,7 @@ fn input_permission_help() -> String {
 fn uinput_permission_help() -> Vec<String> {
     vec![
         "Fix: sudo usermod -aG input \"$USER\"  # then log out and back in".to_owned(),
-        "Udev rule (/etc/udev/rules.d/99-clime-uinput.rules):".to_owned(),
+        "Udev rule (/etc/udev/rules.d/99-cl4se-uinput.rules):".to_owned(),
         "KERNEL==\"uinput\", SUBSYSTEM==\"misc\", GROUP=\"input\", MODE=\"0660\", OPTIONS+=\"static_node=uinput\""
             .to_owned(),
         "Reload: sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=uinput"
@@ -291,9 +291,9 @@ mod tests {
         let output = report.lines.join("\n");
         assert!(report.has_error);
         assert!(output.contains("usermod -aG input"));
-        assert!(output.contains("99-clime-uinput.rules"));
+        assert!(output.contains("99-cl4se-uinput.rules"));
         assert!(output.contains("setxkbmap -option caps:none"));
-        assert!(output.contains("rerun `clime doctor`"));
+        assert!(output.contains("rerun `cl4se doctor`"));
     }
 
     #[test]

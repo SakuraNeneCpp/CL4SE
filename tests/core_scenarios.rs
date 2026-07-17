@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use clime::{
+use cl4se::{
     config::Config,
     core::{CommitKey, Decision, Engine, ImeGuess, ImeSnapshot, ObservedEvent, Platform},
     platform::ImeStateProvider,

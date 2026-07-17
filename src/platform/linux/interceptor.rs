@@ -55,7 +55,7 @@ impl LinuxInputMonitor {
             .any(|device| device.role.has_keyboard())
         {
             bail!(
-                "no readable evdev keyboard found; run `clime doctor` and grant /dev/input/event* access"
+                "no readable evdev keyboard found; run `cl4se doctor` and grant /dev/input/event* access"
             );
         }
         Ok(monitor)
@@ -116,7 +116,7 @@ impl LinuxInputMonitor {
 
     /// Periodic enumeration provides hotplug support without taking EVIOCGRAB.
     /// `evdev::enumerate` opens every device read-only; this module never calls
-    /// `Device::grab`, so CLIME cannot block other input consumers.
+    /// `Device::grab`, so CL4SE cannot block other input consumers.
     fn rescan(&mut self) -> bool {
         self.last_scan = Instant::now();
         let mut seen = HashSet::new();

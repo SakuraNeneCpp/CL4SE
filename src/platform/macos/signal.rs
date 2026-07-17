@@ -83,7 +83,7 @@ impl SignalGuard {
         }
 
         let handle = match thread::Builder::new()
-            .name("clime-macos-signal".to_owned())
+            .name("cl4se-macos-signal".to_owned())
             .spawn(move || signal_thread(read_fd, run_loop))
         {
             Ok(handle) => handle,

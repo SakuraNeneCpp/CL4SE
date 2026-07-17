@@ -251,7 +251,7 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
 
     // Physical Caps Lock is identified solely by scan code 0x3A. Both down and
     // up are suppressed synchronously; any requested pass-through is later
-    // re-injected with CLIME's marker by the worker. Its repeat state is also
+    // re-injected with CL4SE's marker by the worker. Its repeat state is also
     // scan-code-specific: JIS layouts can report different vkCode values for
     // the same physical key across IME modes or event boundaries.
     if is_caps_lock_scan_code(key.scanCode) {
@@ -424,7 +424,7 @@ fn is_printable_vk(vk_code: u32) -> bool {
 
 fn call_next(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // SAFETY: Forwarding the callback parameters unchanged is required by the
-    // hook contract for every event CLIME does not suppress.
+    // hook contract for every event CL4SE does not suppress.
     unsafe { CallNextHookEx(None, code, wparam, lparam) }
 }
 

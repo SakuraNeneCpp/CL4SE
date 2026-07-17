@@ -1,10 +1,10 @@
-# AGENTS.md — CLIME 実装エージェント向けガイド
+# AGENTS.md — CL4SE 実装エージェント向けガイド
 
 このファイルは実装エージェント(Codex)への常設指示と、人間のオペレーターが使うプロンプト集で構成される。**仕様の単一情報源は [README.md](README.md)**。本ファイルと仕様が矛盾したら README.md が正、ただし安全ルール(§2)はすべてに優先する。
 
 ## 1. あなたの役割
 
-- あなたは CLIME(Caps Lock に IME確定を割り当てる常駐ツール、Rust製)の実装担当。設計は README.md に確定済み。
+- あなたは CL4SE (Caps Lock for Safe Enter。Caps Lock にIME確定を割り当てる常駐ツール、Rust製)の実装担当。設計は README.md に確定済み。
 - 仕様の変更・拡大はしない。仕様の欠落・矛盾・技術的に不可能な点を見つけたら、**勝手に仕様を発明せず**、実装を止めて報告する(PR説明や出力に「仕様課題」として明記)。
 - 1マイルストーン = 1ブランチ = 1PR。マイルストーンを跨いだ先回り実装はしない。
 
@@ -81,7 +81,7 @@ cargo check --target x86_64-unknown-linux-gnu
 ```text
 マイルストーンM0を実装してください。ブランチ名: m0-scaffold
 
-- README §2.1 のディレクトリ構成で Cargo プロジェクトを作成(バイナリ名 clime)。
+- README §2.1 のディレクトリ構成で Cargo プロジェクトを作成(バイナリ名 cl4se)。
 - CLI(clap derive): run / install-autostart / uninstall-autostart / doctor / --version(README §1.6)。
   すべてスタブでよいが、run はconfig をロードしてログ初期化まで行い「backend not implemented」で終了する。
 - config.rs: README §1.5 のスキーマを serde で実装。ファイル不在時は既定値+初回生成。既定値のユニットテストを書く。
@@ -89,7 +89,7 @@ cargo check --target x86_64-unknown-linux-gnu
 - .github/workflows/ci.yml: 3OSマトリクスで fmt → clippy → test → build(README §5.3)。
 - .gitignore(target/ 等)。
 
-受け入れ基準: ハーネス全コマンド成功。clime --version と clime doctor(「未実装」表示でよい)がホストで動作。
+受け入れ基準: ハーネス全コマンド成功。cl4se --version と cl4se doctor(「未実装」表示でよい)がホストで動作。
 ```
 
 ### M1 — core層(Engine + CompositionTracker)
@@ -162,7 +162,7 @@ README §3.2 の表の通りに src/platform/macos/ を実装:
 - doctor: TCC権限(Input Monitoring/Accessibility)の状態推定と許可手順の案内、hidutil残留の検出・復元。
 
 cargo check --target aarch64-apple-darwin を必ず通し、PRに T1〜T9 の macOS 実機確認依頼と、
-TCC許可の初回手順(手動で clime run → 許可 → install-autostart)を明記すること。
+TCC許可の初回手順(手動で cl4se run → 許可 → install-autostart)を明記すること。
 
 受け入れ基準: ハーネス全コマンド成功。クリーンアップ保証(§2-5)のコードパスをPR説明で列挙。
 ```

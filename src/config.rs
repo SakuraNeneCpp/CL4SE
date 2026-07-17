@@ -5,7 +5,7 @@ use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE_NAME: &str = "config.toml";
-const CONFIG_DIRECTORY_NAME: &str = "clime";
+const CONFIG_DIRECTORY_NAME: &str = "cl4se";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
@@ -144,7 +144,7 @@ mod tests {
             .context("system clock is before the Unix epoch")?
             .as_nanos();
         let directory =
-            std::env::temp_dir().join(format!("clime-config-test-{}-{unique}", std::process::id()));
+            std::env::temp_dir().join(format!("cl4se-config-test-{}-{unique}", std::process::id()));
         let path = directory.join(CONFIG_FILE_NAME);
 
         let loaded = Config::load_from(&path)?;

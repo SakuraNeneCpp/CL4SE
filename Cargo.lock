@@ -266,6 +266,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "cl4se"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "core-foundation",
+ "core-graphics",
+ "directories",
+ "env_logger",
+ "evdev",
+ "log",
+ "serde",
+ "toml",
+ "windows",
+ "zbus",
+]
+
+[[package]]
 name = "clap"
 version = "4.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,24 +322,6 @@ name = "clap_lex"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
-
-[[package]]
-name = "clime"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "core-foundation",
- "core-graphics",
- "directories",
- "env_logger",
- "evdev",
- "log",
- "serde",
- "toml",
- "windows",
- "zbus",
-]
 
 [[package]]
 name = "colorchoice"

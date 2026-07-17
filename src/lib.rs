@@ -1,4 +1,4 @@
-//! CLIME application library.
+//! CL4SE application library.
 
 pub mod config;
 pub mod core;

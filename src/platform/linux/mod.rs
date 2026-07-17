@@ -37,7 +37,7 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let mut engine = Engine::new(config, Platform::Linux);
     let clock = std::time::Instant::now();
 
-    log::info!("Linux evdev monitor and uinput injector initialized; CLIME is running");
+    log::info!("Linux evdev monitor and uinput injector initialized; CL4SE is running");
     while !SignalGuard::stop_requested() {
         let batch = monitor.poll();
         if batch.state_uncertain {
@@ -50,7 +50,7 @@ pub(super) fn run(config: &Config) -> Result<()> {
                 Decision::InjectCommitKey(key) => {
                     log::debug!("injecting commit key: {key:?}");
                     let result = injector.inject_commit_key(key);
-                    // The CLIME uinput device is deliberately excluded from
+                    // The CL4SE uinput device is deliberately excluded from
                     // observation, so reset explicitly after the marked
                     // sequence instead of waiting to observe our own event.
                     engine.reset_composition();
@@ -82,7 +82,7 @@ pub(super) fn uninstall_autostart() -> Result<()> {
 }
 
 pub(super) fn doctor() -> Result<()> {
-    println!("CLIME doctor (Linux)");
+    println!("CL4SE doctor (Linux)");
     let input = diagnostics::inspect_input_access();
     let uinput = diagnostics::inspect_uinput_access();
     let ime = LinuxImeStateProvider::new().probe();

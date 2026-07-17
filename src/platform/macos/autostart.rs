@@ -5,8 +5,8 @@ use directories::BaseDirs;
 
 use crate::platform::Autostart;
 
-const LABEL: &str = "dev.clime.agent";
-const PLIST_FILE: &str = "dev.clime.agent.plist";
+const LABEL: &str = "dev.cl4se.agent";
+const PLIST_FILE: &str = "dev.cl4se.agent.plist";
 const LAUNCHCTL: &str = "/bin/launchctl";
 const ID: &str = "/usr/bin/id";
 
@@ -14,7 +14,7 @@ pub(crate) struct MacOsAutostart;
 
 impl Autostart for MacOsAutostart {
     fn install(&self) -> Result<()> {
-        let executable = env::current_exe().context("failed to locate clime executable")?;
+        let executable = env::current_exe().context("failed to locate cl4se executable")?;
         let plist_path = launch_agent_path()?;
         let parent = plist_path
             .parent()
@@ -35,11 +35,11 @@ impl Autostart for MacOsAutostart {
         let service = format!("{domain}/{LABEL}");
         if launchctl_service_is_loaded(&service)? {
             run_launchctl(["bootout", service.as_str()])
-                .context("failed to replace the loaded CLIME LaunchAgent")?;
+                .context("failed to replace the loaded CL4SE LaunchAgent")?;
         }
         let plist = plist_path.to_string_lossy();
         run_launchctl(["bootstrap", domain.as_str(), plist.as_ref()])
-            .context("failed to bootstrap CLIME LaunchAgent")
+            .context("failed to bootstrap CL4SE LaunchAgent")
     }
 
     fn uninstall(&self) -> Result<()> {
@@ -48,7 +48,7 @@ impl Autostart for MacOsAutostart {
         let service = format!("{domain}/{LABEL}");
         if launchctl_service_is_loaded(&service)? {
             run_launchctl(["bootout", service.as_str()])
-                .context("failed to boot out CLIME LaunchAgent")?;
+                .context("failed to boot out CL4SE LaunchAgent")?;
         }
 
         match fs::remove_file(&plist_path) {
@@ -144,10 +144,10 @@ mod tests {
 
     #[test]
     fn plist_contains_required_launch_agent_fields() {
-        let plist = launch_agent_plist("/Applications/CLIME & Tools/clime");
+        let plist = launch_agent_plist("/Applications/CL4SE & Tools/cl4se");
 
-        assert!(plist.contains("<string>dev.clime.agent</string>"));
-        assert!(plist.contains("<string>/Applications/CLIME &amp; Tools/clime</string>"));
+        assert!(plist.contains("<string>dev.cl4se.agent</string>"));
+        assert!(plist.contains("<string>/Applications/CL4SE &amp; Tools/cl4se</string>"));
         assert!(plist.contains("<string>run</string>"));
         assert!(plist.contains("<key>RunAtLoad</key>\n  <true/>"));
         assert!(plist.contains("<key>KeepAlive</key>\n  <true/>"));

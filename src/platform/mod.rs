@@ -21,7 +21,7 @@ use self::macos as backend;
 use self::windows as backend;
 
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-compile_error!("CLIME supports only Windows, macOS, and Linux");
+compile_error!("CL4SE supports only Windows, macOS, and Linux");
 
 #[cfg(target_os = "windows")]
 pub const CURRENT_PLATFORM: Platform = Platform::Windows;

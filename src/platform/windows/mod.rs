@@ -67,7 +67,7 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let hooks = WindowsHooks::install()?;
     let capture = CaptureGuard::enable();
 
-    log::info!("Windows hooks installed; CLIME is running");
+    log::info!("Windows hooks installed; CL4SE is running");
     let loop_result = message_loop();
 
     // Disable callbacks first, then unhook, then stop and join the worker. The
@@ -77,7 +77,7 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let worker_result = worker.finish();
     console.signal_cleanup();
     drop(console);
-    log::info!("Windows hooks removed; CLIME stopped");
+    log::info!("Windows hooks removed; CL4SE stopped");
 
     loop_result.and(worker_result)
 }
@@ -91,7 +91,7 @@ pub(super) fn uninstall_autostart() -> Result<()> {
 }
 
 pub(super) fn doctor() -> Result<()> {
-    println!("CLIME doctor (Windows)");
+    println!("CL4SE doctor (Windows)");
     let mut has_error = false;
     let mut message = MSG::default();
     // SAFETY: See run; this only creates the doctor thread's message queue.
@@ -105,7 +105,7 @@ pub(super) fn doctor() -> Result<()> {
         Err(error) => {
             println!("Windows hooks: ERROR: {error:#}");
             println!(
-                "Fix: close other keyboard-hook tools, allow clime.exe in security software, and retry; administrator privileges are not normally required."
+                "Fix: close other keyboard-hook tools, allow cl4se.exe in security software, and retry; administrator privileges are not normally required."
             );
             has_error = true;
         }
@@ -119,7 +119,7 @@ pub(super) fn doctor() -> Result<()> {
             } else {
                 println!("Foreground IME window: WARN unavailable in this terminal");
                 println!(
-                    "Check: run `clime run` and perform README T1 in an IME-aware editor; unsupported applications safely remain inactive."
+                    "Check: run `cl4se run` and perform README T1 in an IME-aware editor; unsupported applications safely remain inactive."
                 );
             }
 
@@ -132,7 +132,7 @@ pub(super) fn doctor() -> Result<()> {
             );
             if snapshot.active == ImeGuess::Unknown {
                 println!(
-                    "IME query: WARN state is Unknown in this terminal; CLIME safely will not inject for Unknown."
+                    "IME query: WARN state is Unknown in this terminal; CL4SE safely will not inject for Unknown."
                 );
             }
             if snapshot.ime_id.is_none() {
@@ -144,15 +144,15 @@ pub(super) fn doctor() -> Result<()> {
         Err(error) => {
             has_error = true;
             println!("COM/TSF: ERROR: {error:#}");
-            println!("Fix: sign out of Windows, sign back in, and rerun `clime doctor`.");
+            println!("Fix: sign out of Windows, sign back in, and rerun `cl4se doctor`.");
         }
     }
 
     if has_error {
-        println!("Result: ERROR. Apply the fixes above, then rerun `clime doctor`.");
+        println!("Result: ERROR. Apply the fixes above, then rerun `cl4se doctor`.");
         bail!("Windows doctor found setup problems")
     } else {
-        println!("Result: OK. Next: run `clime install-autostart`.");
+        println!("Result: OK. Next: run `cl4se install-autostart`.");
         Ok(())
     }
 }
@@ -190,7 +190,7 @@ impl WorkerGuard {
         let worker_shutdown = Arc::clone(&shutdown);
         let worker_error = Arc::clone(&error);
         let handle = thread::Builder::new()
-            .name("clime-windows-worker".to_owned())
+            .name("cl4se-windows-worker".to_owned())
             .spawn(move || {
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     worker_loop(config, event_queue, &worker_shutdown)

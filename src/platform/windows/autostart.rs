@@ -15,13 +15,13 @@ use windows::{
 use crate::platform::Autostart;
 
 const RUN_KEY: windows::core::PCWSTR = w!("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
-const VALUE_NAME: windows::core::PCWSTR = w!("CLIME");
+const VALUE_NAME: windows::core::PCWSTR = w!("CL4SE");
 
 pub(crate) struct WindowsAutostart;
 
 impl Autostart for WindowsAutostart {
     fn install(&self) -> Result<()> {
-        let executable = env::current_exe().context("failed to locate clime executable")?;
+        let executable = env::current_exe().context("failed to locate cl4se executable")?;
         let command = autostart_command(&executable);
         let utf16: Vec<u16> = OsStr::new(&command).encode_wide().chain(Some(0)).collect();
         let bytes: Vec<u8> = utf16.iter().flat_map(|word| word.to_le_bytes()).collect();
@@ -49,7 +49,7 @@ impl Autostart for WindowsAutostart {
         // null-terminated UTF-16 REG_SZ value for the duration of this call.
         unsafe { RegSetValueExW(key.0, VALUE_NAME, None, REG_SZ, Some(&bytes)) }
             .ok()
-            .context("failed to set HKCU Run value CLIME")
+            .context("failed to set HKCU Run value CL4SE")
     }
 
     fn uninstall(&self) -> Result<()> {
@@ -75,7 +75,7 @@ impl Autostart for WindowsAutostart {
         if status == ERROR_FILE_NOT_FOUND {
             Ok(())
         } else {
-            status.ok().context("failed to delete HKCU Run value CLIME")
+            status.ok().context("failed to delete HKCU Run value CL4SE")
         }
     }
 }
@@ -101,8 +101,8 @@ mod tests {
     #[test]
     fn autostart_command_quotes_executable_path() {
         assert_eq!(
-            autostart_command(Path::new(r"C:\Program Files\CLIME\clime.exe")),
-            r#""C:\Program Files\CLIME\clime.exe" run"#
+            autostart_command(Path::new(r"C:\Program Files\CL4SE\cl4se.exe")),
+            r#""C:\Program Files\CL4SE\cl4se.exe" run"#
         );
     }
 }

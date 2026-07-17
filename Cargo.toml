@@ -1,8 +1,8 @@
 [package]
-name = "clime"
+name = "cl4se"
 version = "1.0.0"
 edition = "2021"
-description = "Assign IME commit to the physical Caps Lock key"
+description = "Caps Lock for Safe Enter: assign IME commit to the physical Caps Lock key"
 
 [dependencies]
 anyhow = "1"

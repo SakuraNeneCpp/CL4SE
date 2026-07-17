@@ -1,6 +1,6 @@
-# CLIME — Caps Lock IME commit
+# CL4SE — Caps Lock for Safe Enter
 
-エンターキーがメッセージの送信に割り当てられがちなので, IME確定をエンターキーでやるとよく誤送信する. そこでCaps LockにIME確定を割り当てるキーバインドツールを作る.
+CL4SE (Caps Lock for Safe Enter) は、メッセージ送信に使われがちな Enter をIME確定で押すことによる誤送信を減らすため、Caps LockにIME確定を割り当てるキーバインドツール。
 
 - 対応OS: Windows / macOS / Linux
 - 常駐型CLIツール(v1はトレイアイコンなし)。OSログイン時に自動起動する。
@@ -12,18 +12,18 @@
 
 ### 1. リリースバイナリを配置する
 
-[GitHub Releases](https://github.com/SakuraNeneCpp/CLIME_CapsLockIMEcommit/releases) から使用するOS向けのファイルと `SHA256SUMS` をダウンロードし、チェックサムを確認する。
+[GitHub Releases](https://github.com/SakuraNeneCpp/CL4SE/releases) から使用するOS向けのファイルと `SHA256SUMS` をダウンロードし、チェックサムを確認する。
 
 | OS | リリースファイル | 推奨する固定配置先 |
 |---|---|---|
-| Windows x64 | `clime-windows-x86_64.exe` | `%LOCALAPPDATA%\Programs\CLIME\clime.exe` |
-| macOS (Apple Silicon / Intel universal) | `clime-macos-universal` | `~/Applications/CLIME/clime` |
-| Linux x64 | `clime-linux-x86_64` | `~/.local/bin/clime` |
+| Windows x64 | `cl4se-windows-x86_64.exe` | `%LOCALAPPDATA%\Programs\CL4SE\cl4se.exe` |
+| macOS (Apple Silicon / Intel universal) | `cl4se-macos-universal` | `~/Applications/CL4SE/cl4se` |
+| Linux x64 | `cl4se-linux-x86_64` | `~/.local/bin/cl4se` |
 
 macOS / Linux では配置後に実行権限を付ける。
 
 ```sh
-chmod 755 /path/to/clime
+chmod 755 /path/to/cl4se
 ```
 
 自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v1.0.0 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
@@ -35,7 +35,7 @@ chmod 755 /path/to/clime
 管理者権限は不要。次を実行し、フックとCOM/TSFにエラーがなく `Result: OK` と表示されることを確認する。doctorを実行したターミナルでIMEウィンドウを取得できない場合は `WARN` になるが、安全のため状態を `Unknown` として注入しない。登録後に §5.5 T1 をIME対応エディタで確認する。
 
 ```powershell
-& "$env:LOCALAPPDATA\Programs\CLIME\clime.exe" doctor
+& "$env:LOCALAPPDATA\Programs\CL4SE\cl4se.exe" doctor
 ```
 
 #### macOS
@@ -43,18 +43,18 @@ chmod 755 /path/to/clime
 先に固定配置したバイナリを手動起動し、「入力監視」と「アクセシビリティ」を許可する。許可後は `Ctrl+C` で停止して診断する。
 
 ```sh
-~/Applications/CLIME/clime run
-~/Applications/CLIME/clime doctor
+~/Applications/CL4SE/cl4se run
+~/Applications/CL4SE/cl4se doctor
 ```
 
-両方の権限は「システム設定 > プライバシーとセキュリティ」で確認できる。バイナリを移動すると再許可が必要になる。Terminalの Secure Keyboard Entry はイベントタップを無効にするため、CLIME利用中はオフにする。
+両方の権限は「システム設定 > プライバシーとセキュリティ」で確認できる。バイナリを移動すると再許可が必要になる。Terminalの Secure Keyboard Entry はイベントタップを無効にするため、CL4SE利用中はオフにする。
 
 #### Linux
 
 診断を実行し、表示される `/dev/input`、`/dev/uinput`、fcitx5/IBus、Caps Lock抑止の修正手順に従う。
 
 ```sh
-~/.local/bin/clime doctor
+~/.local/bin/cl4se doctor
 ```
 
 典型的には `input` グループへの追加と `/dev/uinput` 用udevルールが必要になる。doctorは実行するコマンドとルール内容を表示する。グループを変更した場合はログアウト/ログイン後に再度doctorを実行する。GNOME以外のWayland環境では、デスクトップまたはコンポジタの設定でCaps Lockを無効化する。
@@ -64,10 +64,10 @@ chmod 755 /path/to/clime
 doctorが `Result: OK` を表示してから、固定配置したバイナリで登録する。
 
 ```sh
-clime install-autostart
+cl4se install-autostart
 ```
 
-Windowsで固定配置先をPATHに追加していない場合はフルパスで実行する。登録解除は `clime uninstall-autostart`。更新時にバイナリのパスを変えた場合は、旧バイナリで登録解除してから新バイナリで再登録する。
+Windowsで固定配置先をPATHに追加していない場合はフルパスで実行する。登録解除は `cl4se uninstall-autostart`。更新時にバイナリのパスを変えた場合は、旧バイナリで登録解除してから新バイナリで再登録する。
 
 ---
 
@@ -157,9 +157,9 @@ Windowsで固定配置先をPATHに追加していない場合はフルパスで
 
 TOML。パスは [directories](https://crates.io/crates/directories) クレート準拠:
 
-- Windows: `%APPDATA%\clime\config.toml`
-- macOS: `~/Library/Application Support/clime/config.toml`
-- Linux: `~/.config/clime/config.toml`
+- Windows: `%APPDATA%\cl4se\config.toml`
+- macOS: `~/Library/Application Support/cl4se/config.toml`
+- Linux: `~/.config/cl4se/config.toml`
 
 ```toml
 [general]
@@ -176,15 +176,15 @@ heuristic_timeout_secs = 30   # Composing状態の有効期限
 
 ### 1.6 CLI
 
-バイナリ名: `clime`
+バイナリ名: `cl4se`
 
 | コマンド | 動作 |
 |---|---|
-| `clime run` | フォアグラウンドで常駐実行(ログは stderr、`RUST_LOG` で上書き可) |
-| `clime install-autostart` | ログイン時自動起動を登録(§3 各OS欄) |
-| `clime uninstall-autostart` | 自動起動を解除 |
-| `clime doctor` | 権限・依存・IME検出可否を診断して人間向けに表示。異常時は終了コード非0 |
-| `clime --version` | バージョン表示 |
+| `cl4se run` | フォアグラウンドで常駐実行(ログは stderr、`RUST_LOG` で上書き可) |
+| `cl4se install-autostart` | ログイン時自動起動を登録(§3 各OS欄) |
+| `cl4se uninstall-autostart` | 自動起動を解除 |
+| `cl4se doctor` | 権限・依存・IME検出可否を診断して人間向けに表示。異常時は終了コード非0 |
+| `cl4se --version` | バージョン表示 |
 
 終了時(SIGTERM / Ctrl+C / コンソールクローズ)は必ずクリーンアップする(フック解除、macOSの hidutil リマップ復元、uinputデバイス破棄)。
 
@@ -208,7 +208,7 @@ flowchart LR
 ### 2.1 ディレクトリ構成
 
 ```
-clime/
+cl4se/
 ├── Cargo.toml
 ├── src/
 │   ├── main.rs              # CLIエントリ (clap)
@@ -280,7 +280,7 @@ pub trait Autostart {
 | `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で送信。フォーカス窓を取得できない場合は前面トップレベル窓へフォールバック。解決中に前面窓が変化・応答なし・IMEウィンドウなし → `Unknown` |
 | `ime_id` | TSF `ITfInputProcessorProfileMgr::GetActiveProfile` でアクティブ入力プロファイルを取得し、MS-IME / Google 日本語入力の CLSID と照合(**要検証**: 呼び出し方法と各CLSID値)。取得不能は `None`(→ Enter に解決) |
 | 確定キー注入 | `SendInput`(VK_RETURN、または VK_CONTROL + `M` の一連)。`dwExtraInfo` に自前マーカー。フック側は `LLKHF_INJECTED` + マーカーで自イベントを無視 |
-| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CLIME` = `"<exe path>" run` |
+| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" run` |
 | 権限 | 管理者権限不要。UACセキュアデスクトップではフックが効かないが実害なし |
 | 注意 | フックコールバック内は最小処理(重い処理はチャネルでワーカーへ)。フックはメッセージループ必須 |
 
@@ -295,11 +295,11 @@ pub trait Autostart {
 | `ime_active` | `TISCopyCurrentKeyboardInputSource` の input source ID に `Japanese` を含むか(C FFIで宣言)。変更検知はトリガー押下時に都度取得で十分 |
 | `ime_id` | 上記 input source ID をそのまま利用。ただし macOS の許可リストは当面空のため `auto` では常に Enter に解決(§1.3)。ログと将来の拡張用に取得だけ行う |
 | 確定キー注入 | `CGEventCreateKeyboardEvent`(kVK_Return = 36。`commit_key = "ctrl_m"` 明示時は kVK_ANSI_M = 46 + Control フラグ)→ `CGEventPost`。`CGEventSetIntegerValueField(kCGEventSourceUserData, マーカー)` で自イベント識別 |
-| 自動起動 | `~/Library/LaunchAgents/dev.clime.agent.plist`(RunAtLoad, KeepAlive)。`launchctl bootstrap/bootout` で登録・解除 |
-| 権限 | **入力監視(Input Monitoring)** と **アクセシビリティ** をTCCで手動許可。初回は `clime run` を手動実行して許可を済ませてから `install-autostart` する運用。バイナリのパスを変えると再許可が必要 |
+| 自動起動 | `~/Library/LaunchAgents/dev.cl4se.agent.plist`(RunAtLoad, KeepAlive)。`launchctl bootstrap/bootout` で登録・解除 |
+| 権限 | **入力監視(Input Monitoring)** と **アクセシビリティ** をTCCで手動許可。初回は `cl4se run` を手動実行して許可を済ませてから `install-autostart` する運用。バイナリのパスを変えると再許可が必要 |
 | Shift+パススルー | CapsLockトグルのプログラム的切替は `IOHIDSetModifierLockState`(準private API)が必要 → **v1はベストエフォート**。不可なら `shift_passthrough` はmacOSで未サポートとしてdoctorで通知 |
 
-既知の制約: ターミナルの「Secure Keyboard Entry」有効時はイベントタップが無効化される。hidutilリマップはクラッシュ時に残留し得る → `clime doctor` が残留した CLIME リマップを検出・復元する。手動で復元する場合は `/usr/bin/hidutil property --set '{"UserKeyMapping":[]}'` を実行する。
+既知の制約: ターミナルの「Secure Keyboard Entry」有効時はイベントタップが無効化される。hidutilリマップはクラッシュ時に残留し得る → `cl4se doctor` が残留した CL4SE リマップを検出・復元する。手動で復元する場合は `/usr/bin/hidutil property --set '{"UserKeyMapping":[]}'` を実行する。
 
 ### 3.3 Linux
 
@@ -311,8 +311,8 @@ pub trait Autostart {
 | `ime_active` | fcitx5: zbus で `org.fcitx.Fcitx5` の `Controller1.State()` を照会(**要検証**: 戻り値の意味) / ibus: グローバルエンジン名に `mozc` 等を含むか / どちらも不在 → `Unknown` |
 | `ime_id` | fcitx5: `Controller1.CurrentInputMethod()` / ibus: グローバルエンジン名。`mozc` 系なら Ctrl+M に解決(§1.3)。取得不能は `None` |
 | 確定キー注入 | uinput 仮想キーボード(`evdev` クレートの VirtualDevice)で KEY_ENTER、または KEY_LEFTCTRL + KEY_M の一連。自デバイス由来のイベントは監視対象から除外 |
-| 自動起動 | systemd user unit(`~/.config/systemd/user/clime.service`、`systemctl --user enable`)。systemd不在環境はXDG autostart(.desktop)にフォールバック |
-| 権限 | `/dev/input` 読み取り: `input` グループ所属。`/dev/uinput`: udevルールが必要。`clime doctor` が不足を検出して設定手順(usermod / udev rule)を表示 |
+| 自動起動 | systemd user unit(`~/.config/systemd/user/cl4se.service`、`systemctl --user enable`)。systemd不在環境はXDG autostart(.desktop)にフォールバック |
+| 権限 | `/dev/input` 読み取り: `input` グループ所属。`/dev/uinput`: udevルールが必要。`cl4se doctor` が不足を検出して設定手順(usermod / udev rule)を表示 |
 
 既知の制約: Wayland/X11ともevdev+uinputで動作するが、XKB設定はデスクトップ環境ごとに手段が異なる(自動設定できない環境はドキュメントで案内)。フォーカス変更検出は困難なため、マウス・タイムアウトによるリセットに依存。
 
@@ -384,7 +384,7 @@ cargo check --target x86_64-unknown-linux-gnu
 
 | # | 内容 | 完了条件(共通: §5.2 全コマンド成功) |
 |---|---|---|
-| M0 | スキャフォールド: CLI骨格・config・ログ・CI | `clime --version` / `doctor`(スタブ)が3OSでcheck通過 |
+| M0 | スキャフォールド: CLI骨格・config・ログ・CI | `cl4se --version` / `doctor`(スタブ)が3OSでcheck通過 |
 | M1 | core層: Engine + CompositionTracker + 確定キー解決 + トレイト + モックテスト | §1.3(判定表・確定キー解決)と §1.4 の全遷移をテストで網羅 |
 | M2 | Windowsバックエンド + 自動起動 | 手動テスト表(§6)のWindows列が通る |
 | M3 | macOSバックエンド + 自動起動 | 同 macOS列 |
@@ -403,7 +403,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | T4 | 変換中にマウスで別の場所をクリック → Caps Lock | 何も起きない(トラッカーがリセット済み) |
 | T5 | Shift + Caps Lock | 本来のcapsトグルが効く(macOSは§3.2の範囲で) |
 | T6 | チャットアプリ(Slack/Discord等)で変換→Caps Lock確定→Enter | 確定と送信が意図通り分離される |
-| T7 | `clime install-autostart` → 再ログイン | 自動起動している。`uninstall-autostart` で解除される |
+| T7 | `cl4se install-autostart` → 再ログイン | 自動起動している。`uninstall-autostart` で解除される |
 | T8 | プロセスをkill → キーボードが完全に正常に戻る | 残留リマップ・フックなし(macOSは `doctor` で復元確認) |
 | T9 | `RUST_LOG=debug` で変換中に Caps Lock(MS-IME / Google日本語入力 / mozc 環境と、許可リスト外のIME環境) | ログ上の解決キーが §1.3 の許可リスト通り(前者は Ctrl+M、後者と macOS は Enter)。いずれも確定に成功する |
 

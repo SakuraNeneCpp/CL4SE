@@ -163,7 +163,7 @@ impl ImeStateProvider for WindowsImeStateProvider {
 fn foreground_ime_window() -> Option<HWND> {
     let input_window = foreground_input_window()?;
     // SAFETY: input_window is a non-null HWND returned by Windows. The result
-    // is a borrowed IME window handle that CLIME only checks and queries.
+    // is a borrowed IME window handle that CL4SE only checks and queries.
     let ime_window = unsafe { ImmGetDefaultIMEWnd(input_window) };
     (!ime_window.0.is_null()).then_some(ime_window)
 }

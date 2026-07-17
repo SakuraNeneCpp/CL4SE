@@ -11,8 +11,8 @@ use crate::platform::Autostart;
 
 use super::xkb::{self, XkbInstallOutcome};
 
-const SYSTEMD_UNIT_NAME: &str = "clime.service";
-const XDG_DESKTOP_NAME: &str = "clime.desktop";
+const SYSTEMD_UNIT_NAME: &str = "cl4se.service";
+const XDG_DESKTOP_NAME: &str = "cl4se.desktop";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AutostartBackend {
@@ -24,7 +24,7 @@ pub(crate) struct LinuxAutostart;
 
 impl Autostart for LinuxAutostart {
     fn install(&self) -> Result<()> {
-        let executable = env::current_exe().context("failed to locate clime executable")?;
+        let executable = env::current_exe().context("failed to locate cl4se executable")?;
         let backend = choose_backend(systemd_user_available());
         match backend {
             AutostartBackend::Systemd => {
@@ -52,7 +52,7 @@ impl Autostart for LinuxAutostart {
             }
             Err(error) => {
                 println!(
-                    "Caps Lock suppression: WARN automatic configuration failed: {error:#}; run `clime doctor`"
+                    "Caps Lock suppression: WARN automatic configuration failed: {error:#}; run `cl4se doctor`"
                 );
             }
         }
@@ -136,21 +136,21 @@ fn require_success(output: Output, command: &str) -> Result<()> {
 fn systemd_unit(executable: &Path) -> Result<String> {
     let executable = quote_systemd(executable)?;
     Ok(format!(
-        "[Unit]\nDescription=CLIME Caps Lock IME commit\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart={executable} run\nRestart=on-failure\nRestartSec=2\n\n[Install]\nWantedBy=default.target\n"
+        "[Unit]\nDescription=CL4SE Caps Lock IME commit\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart={executable} run\nRestart=on-failure\nRestartSec=2\n\n[Install]\nWantedBy=default.target\n"
     ))
 }
 
 fn xdg_desktop_entry(executable: &Path) -> Result<String> {
     let executable = quote_desktop_exec(executable)?;
     Ok(format!(
-        "[Desktop Entry]\nType=Application\nName=CLIME\nComment=Assign IME commit to the physical Caps Lock key\nExec={executable} run\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
+        "[Desktop Entry]\nType=Application\nName=CL4SE\nComment=Assign IME commit to the physical Caps Lock key\nExec={executable} run\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
     ))
 }
 
 fn quote_systemd(path: &Path) -> Result<String> {
     let path = path
         .to_str()
-        .ok_or_else(|| anyhow!("clime executable path is not UTF-8: {}", path.display()))?;
+        .ok_or_else(|| anyhow!("cl4se executable path is not UTF-8: {}", path.display()))?;
     reject_line_breaks(path)?;
     let escaped = path
         .replace('%', "%%")
@@ -162,7 +162,7 @@ fn quote_systemd(path: &Path) -> Result<String> {
 fn quote_desktop_exec(path: &Path) -> Result<String> {
     let path = path
         .to_str()
-        .ok_or_else(|| anyhow!("clime executable path is not UTF-8: {}", path.display()))?;
+        .ok_or_else(|| anyhow!("cl4se executable path is not UTF-8: {}", path.display()))?;
     reject_line_breaks(path)?;
     let escaped = path.replace('\\', "\\\\").replace('"', "\\\"");
     Ok(format!("\"{escaped}\""))
@@ -170,7 +170,7 @@ fn quote_desktop_exec(path: &Path) -> Result<String> {
 
 fn reject_line_breaks(value: &str) -> Result<()> {
     if value.contains(['\n', '\r']) {
-        bail!("clime executable path contains a line break");
+        bail!("cl4se executable path contains a line break");
     }
     Ok(())
 }
@@ -219,8 +219,8 @@ mod tests {
 
     #[test]
     fn systemd_unit_contains_required_service_fields() -> Result<()> {
-        let unit = systemd_unit(Path::new("/opt/CLIME Tools/clime"))?;
-        assert!(unit.contains("ExecStart=\"/opt/CLIME Tools/clime\" run"));
+        let unit = systemd_unit(Path::new("/opt/CL4SE Tools/cl4se"))?;
+        assert!(unit.contains("ExecStart=\"/opt/CL4SE Tools/cl4se\" run"));
         assert!(unit.contains("WantedBy=default.target"));
         assert!(unit.contains("Restart=on-failure"));
         Ok(())
@@ -228,15 +228,15 @@ mod tests {
 
     #[test]
     fn systemd_path_escapes_specifiers() -> Result<()> {
-        let unit = systemd_unit(Path::new("/opt/100%/clime"))?;
-        assert!(unit.contains("/opt/100%%/clime"));
+        let unit = systemd_unit(Path::new("/opt/100%/cl4se"))?;
+        assert!(unit.contains("/opt/100%%/cl4se"));
         Ok(())
     }
 
     #[test]
     fn xdg_entry_quotes_paths_with_spaces() -> Result<()> {
-        let entry = xdg_desktop_entry(Path::new("/opt/CLIME Tools/clime"))?;
-        assert!(entry.contains("Exec=\"/opt/CLIME Tools/clime\" run"));
+        let entry = xdg_desktop_entry(Path::new("/opt/CL4SE Tools/cl4se"))?;
+        assert!(entry.contains("Exec=\"/opt/CL4SE Tools/cl4se\" run"));
         assert!(entry.contains("X-GNOME-Autostart-enabled=true"));
         Ok(())
     }

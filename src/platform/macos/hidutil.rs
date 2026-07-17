@@ -3,7 +3,7 @@ use std::process::Command;
 use anyhow::{bail, Context, Result};
 
 const HIDUTIL: &str = "/usr/bin/hidutil";
-const CLIME_MAPPING: &str = r#"{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x70000006D}]}"#;
+const CL4SE_MAPPING: &str = r#"{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x70000006D}]}"#;
 const EMPTY_MAPPING: &str = r#"{"UserKeyMapping":[]}"#;
 const CAPS_LOCK_USAGE_HEX: &str = "0x700000039";
 const F18_USAGE_HEX: &str = "0x70000006d";
@@ -20,7 +20,7 @@ impl HidutilRemapGuard {
         // failure after partially applying the property, Drop still attempts
         // the fail-safe empty mapping restoration.
         let guard = Self { active: true };
-        set_mapping(CLIME_MAPPING).context("failed to map Caps Lock to F18 with hidutil")?;
+        set_mapping(CL4SE_MAPPING).context("failed to map Caps Lock to F18 with hidutil")?;
         Ok(guard)
     }
 
@@ -41,12 +41,12 @@ impl HidutilRemapGuard {
 impl Drop for HidutilRemapGuard {
     fn drop(&mut self) {
         if let Err(error) = self.restore_inner() {
-            log::warn!("hidutil cleanup failed; run `clime doctor`: {error:#}");
+            log::warn!("hidutil cleanup failed; run `cl4se doctor`: {error:#}");
         }
     }
 }
 
-pub(crate) fn clime_mapping_is_active() -> Result<bool> {
+pub(crate) fn cl4se_mapping_is_active() -> Result<bool> {
     let output = Command::new(HIDUTIL)
         .args(["property", "--get", "UserKeyMapping"])
         .output()
@@ -60,7 +60,7 @@ pub(crate) fn clime_mapping_is_active() -> Result<bool> {
         );
     }
 
-    Ok(output_contains_clime_mapping(&String::from_utf8_lossy(
+    Ok(output_contains_cl4se_mapping(&String::from_utf8_lossy(
         &output.stdout,
     )))
 }
@@ -86,7 +86,7 @@ fn set_mapping(mapping: &str) -> Result<()> {
     )
 }
 
-fn output_contains_clime_mapping(output: &str) -> bool {
+fn output_contains_cl4se_mapping(output: &str) -> bool {
     let lower = output.to_ascii_lowercase();
     let has_source = lower.contains("hidkeyboardmodifiermappingsrc")
         && (lower.contains(CAPS_LOCK_USAGE_HEX) || lower.contains(CAPS_LOCK_USAGE_DECIMAL));
@@ -100,17 +100,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn detects_clime_mapping_in_hex_or_decimal_output() {
+    fn detects_cl4se_mapping_in_hex_or_decimal_output() {
         let hex = r#"HIDKeyboardModifierMappingSrc = 0x700000039; HIDKeyboardModifierMappingDst = 0x70000006D;"#;
         let decimal = r#"HIDKeyboardModifierMappingSrc = 30064771129; HIDKeyboardModifierMappingDst = 30064771181;"#;
 
-        assert!(output_contains_clime_mapping(hex));
-        assert!(output_contains_clime_mapping(decimal));
+        assert!(output_contains_cl4se_mapping(hex));
+        assert!(output_contains_cl4se_mapping(decimal));
     }
 
     #[test]
     fn ignores_unrelated_user_mapping() {
         let output = r#"HIDKeyboardModifierMappingSrc = 0x700000039; HIDKeyboardModifierMappingDst = 0x700000029;"#;
-        assert!(!output_contains_clime_mapping(output));
+        assert!(!output_contains_cl4se_mapping(output));
     }
 }

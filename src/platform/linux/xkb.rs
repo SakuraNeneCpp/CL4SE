@@ -9,7 +9,7 @@ use directories::BaseDirs;
 use serde::{Deserialize, Serialize};
 
 const STATE_FILE_NAME: &str = "linux-xkb-state.toml";
-const CLIME_CONFIG_DIR: &str = "clime";
+const CL4SE_CONFIG_DIR: &str = "cl4se";
 const GNOME_SCHEMA: &str = "org.gnome.desktop.input-sources";
 const GNOME_KEY: &str = "xkb-options";
 const CAPS_NONE: &str = "caps:none";
@@ -58,7 +58,7 @@ pub(crate) fn configure_for_install() -> Result<XkbInstallOutcome> {
 }
 
 /// Reapplies only settings previously managed by install-autostart. This is
-/// needed because X11 keymaps can be reset at login; a manual `clime run`
+/// needed because X11 keymaps can be reset at login; a manual `cl4se run`
 /// without managed state never mutates the desktop configuration.
 pub(crate) fn reapply_if_managed() -> Result<()> {
     let path = state_path()?;
@@ -263,7 +263,7 @@ fn state_path() -> Result<PathBuf> {
     let base = BaseDirs::new().ok_or_else(|| anyhow!("could not determine config directory"))?;
     Ok(base
         .config_dir()
-        .join(CLIME_CONFIG_DIR)
+        .join(CL4SE_CONFIG_DIR)
         .join(STATE_FILE_NAME))
 }
 

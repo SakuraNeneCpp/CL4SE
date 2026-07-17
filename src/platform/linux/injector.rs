@@ -6,7 +6,7 @@ use evdev::{
 
 use crate::{core::CommitKey, platform::KeyInjector};
 
-pub(crate) const VIRTUAL_DEVICE_NAME: &str = "CLIME Virtual Keyboard";
+pub(crate) const VIRTUAL_DEVICE_NAME: &str = "CL4SE Virtual Keyboard";
 const VIRTUAL_VENDOR: u16 = 0x434c;
 const VIRTUAL_PRODUCT: u16 = 0x494d;
 const VIRTUAL_VERSION: u16 = 1;
@@ -79,9 +79,9 @@ impl LinuxKeyInjector {
             .name(VIRTUAL_DEVICE_NAME)
             .input_id(virtual_input_id())
             .with_keys(&keys)
-            .context("failed to configure CLIME uinput keys")?
+            .context("failed to configure CL4SE uinput keys")?
             .build()
-            .context("failed to create CLIME uinput virtual keyboard")?;
+            .context("failed to create CL4SE uinput virtual keyboard")?;
         Ok(Self { device })
     }
 

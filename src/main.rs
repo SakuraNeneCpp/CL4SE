@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
+use cl4se::{config::Config, platform};
 use clap::{Parser, Subcommand};
-use clime::{config::Config, platform};
 
 #[derive(Debug, Parser)]
-#[command(name = "clime", version, about)]
+#[command(name = "cl4se", version, about)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -11,11 +11,11 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Run CLIME in the foreground.
+    /// Run CL4SE in the foreground.
     Run,
-    /// Register CLIME to start at login.
+    /// Register CL4SE to start at login.
     InstallAutostart,
-    /// Remove CLIME from login startup.
+    /// Remove CL4SE from login startup.
     UninstallAutostart,
     /// Diagnose permissions, dependencies, and IME detection.
     Doctor,

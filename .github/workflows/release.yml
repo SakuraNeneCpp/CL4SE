@@ -32,13 +32,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item target/x86_64-pc-windows-msvc/release/clime.exe dist/clime-windows-x86_64.exe
+          Copy-Item target/x86_64-pc-windows-msvc/release/cl4se.exe dist/cl4se-windows-x86_64.exe
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clime-windows-x86_64
-          path: dist/clime-windows-x86_64.exe
+          name: cl4se-windows-x86_64
+          path: dist/cl4se-windows-x86_64.exe
           if-no-files-found: error
 
   build-macos:
@@ -63,17 +63,17 @@ jobs:
         run: |
           mkdir -p dist
           lipo -create \
-            target/aarch64-apple-darwin/release/clime \
-            target/x86_64-apple-darwin/release/clime \
-            -output dist/clime-macos-universal
-          lipo dist/clime-macos-universal -verify_arch arm64 x86_64
-          chmod 755 dist/clime-macos-universal
+            target/aarch64-apple-darwin/release/cl4se \
+            target/x86_64-apple-darwin/release/cl4se \
+            -output dist/cl4se-macos-universal
+          lipo dist/cl4se-macos-universal -verify_arch arm64 x86_64
+          chmod 755 dist/cl4se-macos-universal
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clime-macos-universal
-          path: dist/clime-macos-universal
+          name: cl4se-macos-universal
+          path: dist/cl4se-macos-universal
           if-no-files-found: error
 
   build-linux:
@@ -92,13 +92,13 @@ jobs:
         run: cargo build --locked --release --target x86_64-unknown-linux-gnu
 
       - name: Stage release binary
-        run: install -Dm755 target/x86_64-unknown-linux-gnu/release/clime dist/clime-linux-x86_64
+        run: install -Dm755 target/x86_64-unknown-linux-gnu/release/cl4se dist/cl4se-linux-x86_64
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clime-linux-x86_64
-          path: dist/clime-linux-x86_64
+          name: cl4se-linux-x86_64
+          path: dist/cl4se-linux-x86_64
           if-no-files-found: error
 
   publish:
@@ -117,7 +117,7 @@ jobs:
 
       - name: Generate checksums
         working-directory: dist
-        run: sha256sum clime-* > SHA256SUMS
+        run: sha256sum cl4se-* > SHA256SUMS
 
       - name: Create or update GitHub Release
         env:
