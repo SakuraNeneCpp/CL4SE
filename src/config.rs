@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, Context, Result};
 use directories::BaseDirs;
@@ -30,6 +33,7 @@ pub struct DetectionConfig {
 #[serde(rename_all = "snake_case")]
 pub enum IdleAction {
     None,
+    ShiftEnter,
     #[serde(rename = "capslock")]
     CapsLock,
 }
@@ -54,14 +58,17 @@ pub enum LogLevel {
 
 impl Config {
     pub fn load() -> Result<Self> {
-        let base_dirs = BaseDirs::new()
-            .ok_or_else(|| anyhow!("could not determine the configuration directory"))?;
-        Self::load_from(
-            &base_dirs
-                .config_dir()
-                .join(CONFIG_DIRECTORY_NAME)
-                .join(CONFIG_FILE_NAME),
-        )
+        Self::load_from(&Self::path()?)
+    }
+
+    pub fn path() -> Result<PathBuf> {
+        Ok(config_directory()?.join(CONFIG_FILE_NAME))
+    }
+
+    pub fn save(&self) -> Result<PathBuf> {
+        let path = Self::path()?;
+        Self::save_to(&path, self)?;
+        Ok(path)
     }
 
     fn load_from(path: &Path) -> Result<Self> {
@@ -73,6 +80,11 @@ impl Config {
         }
 
         let config = Self::default();
+        Self::save_to(path, &config)?;
+        Ok(config)
+    }
+
+    fn save_to(path: &Path, config: &Self) -> Result<()> {
         let parent = path.parent().ok_or_else(|| {
             anyhow!(
                 "configuration path has no parent directory: {}",
@@ -85,10 +97,25 @@ impl Config {
                 parent.display()
             )
         })?;
-        let contents = toml::to_string_pretty(&config).context("failed to serialize defaults")?;
+        let contents = toml::to_string_pretty(config).context("failed to serialize config")?;
         fs::write(path, contents)
-            .with_context(|| format!("failed to create config file: {}", path.display()))?;
-        Ok(config)
+            .with_context(|| format!("failed to write config file: {}", path.display()))
+    }
+}
+
+pub(crate) fn config_directory() -> Result<PathBuf> {
+    let base_dirs = BaseDirs::new()
+        .ok_or_else(|| anyhow!("could not determine the configuration directory"))?;
+    Ok(base_dirs.config_dir().join(CONFIG_DIRECTORY_NAME))
+}
+
+impl IdleAction {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::ShiftEnter => "shift_enter",
+            Self::CapsLock => "capslock",
+        }
     }
 }
 
@@ -182,6 +209,46 @@ heuristic_timeout_secs = 5
         assert_eq!(config.general.commit_key, CommitKeyConfig::CtrlM);
         assert_eq!(config.general.log_level, LogLevel::Trace);
         assert_eq!(config.detection.heuristic_timeout_secs, 5);
+        Ok(())
+    }
+
+    #[test]
+    fn shift_enter_idle_action_deserializes_without_changing_the_default() -> Result<()> {
+        let config: Config = toml::from_str(
+            r#"
+[general]
+idle_action = "shift_enter"
+shift_passthrough = true
+commit_key = "auto"
+log_level = "info"
+
+[detection]
+heuristic_timeout_secs = 30
+"#,
+        )?;
+
+        assert_eq!(config.general.idle_action, IdleAction::ShiftEnter);
+        assert_eq!(Config::default().general.idle_action, IdleAction::None);
+        Ok(())
+    }
+
+    #[test]
+    fn changed_config_is_persisted_and_reloaded() -> Result<()> {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("system clock is before the Unix epoch")?
+            .as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("cl4se-save-test-{}-{unique}", std::process::id()));
+        let path = directory.join(CONFIG_FILE_NAME);
+        let mut config = Config::default();
+        config.general.idle_action = IdleAction::ShiftEnter;
+
+        Config::save_to(&path, &config)?;
+        let reloaded = Config::load_from(&path)?;
+        fs::remove_dir_all(directory)?;
+
+        assert_eq!(reloaded, config);
         Ok(())
     }
 }

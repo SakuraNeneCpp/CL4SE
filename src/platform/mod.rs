@@ -3,6 +3,7 @@
 use anyhow::Result;
 
 use crate::config::Config;
+use crate::control::RestartRequest;
 use crate::core::Engine;
 pub use crate::core::{CommitKey, Decision, ImeGuess, ImeSnapshot, ObservedEvent, Platform};
 
@@ -36,6 +37,7 @@ pub trait KeyInterceptor {
 
 pub trait KeyInjector {
     fn inject_commit_key(&mut self, key: CommitKey) -> anyhow::Result<()>;
+    fn inject_shift_enter(&mut self) -> anyhow::Result<()>;
     fn inject_capslock(&mut self) -> anyhow::Result<()>;
 }
 
@@ -48,9 +50,15 @@ pub trait Autostart {
     fn uninstall(&self) -> anyhow::Result<()>;
 }
 
-pub fn run(config: &Config) -> Result<()> {
-    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| backend::run(config)))
-        .map_err(|_| anyhow::anyhow!("platform backend panicked after cleanup"))?
+pub fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        backend::run(config, restart)
+    }))
+    .map_err(|_| anyhow::anyhow!("platform backend panicked after cleanup"))?
+}
+
+pub fn restart_process() -> Result<()> {
+    backend::restart_process()
 }
 
 pub fn install_autostart() -> Result<()> {

@@ -9,6 +9,9 @@ mod signal;
 
 use std::{
     any::Any,
+    env,
+    os::unix::process::CommandExt,
+    process::Command,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc, Arc, Mutex,
@@ -17,11 +20,12 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use core_foundation::runloop::CFRunLoop;
 
 use crate::{
     config::Config,
+    control::{RestartRequest, RestartWatcher},
     core::{Decision, Engine, Platform},
     platform::{Autostart, KeyInjector},
 };
@@ -39,7 +43,7 @@ use self::{
 const EVENT_QUEUE_CAPACITY: usize = 1024;
 const WORKER_POLL_INTERVAL: Duration = Duration::from_millis(1);
 
-pub(super) fn run(config: &Config) -> Result<()> {
+pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     let tcc = diagnostics::tcc_status();
     if !tcc.input_monitoring || !tcc.event_posting || !tcc.accessibility {
         log::warn!(
@@ -56,11 +60,17 @@ pub(super) fn run(config: &Config) -> Result<()> {
         .ok_or_else(|| anyhow!("macOS event tap disappeared during startup"))?
         .run_loop();
     runtime.signal = Some(SignalGuard::install(run_loop.clone())?);
-    runtime.worker = Some(WorkerGuard::start(config.clone(), queue, run_loop)?);
+    runtime.worker = Some(WorkerGuard::start(
+        config.clone(),
+        queue,
+        run_loop,
+        restart.watcher(),
+    )?);
     runtime.remap = Some(HidutilRemapGuard::install()?);
+    let mut startup_restart = restart.watcher();
 
     log::info!("Caps Lock mapped to F18; macOS event tap installed; CL4SE is running");
-    if !SignalGuard::stop_requested() {
+    if !SignalGuard::stop_requested() && !startup_restart.poll() {
         if let Some(event_tap) = runtime.event_tap.as_ref() {
             event_tap.run();
         }
@@ -68,6 +78,12 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let result = runtime.finish();
     log::info!("macOS event tap removed and hidutil mapping restored; CL4SE stopped");
     result
+}
+
+pub(super) fn restart_process() -> Result<()> {
+    let executable = env::current_exe().context("failed to locate the CL4SE executable")?;
+    let error = Command::new(executable).arg("run").exec();
+    Err(error).context("failed to replace the CL4SE process")
 }
 
 pub(super) fn install_autostart() -> Result<()> {
@@ -198,17 +214,30 @@ struct WorkerGuard {
 }
 
 impl WorkerGuard {
-    fn start(config: Config, queue: Arc<EventQueue>, run_loop: CFRunLoop) -> Result<Self> {
+    fn start(
+        config: Config,
+        queue: Arc<EventQueue>,
+        run_loop: CFRunLoop,
+        restart: RestartWatcher,
+    ) -> Result<Self> {
         let shutdown = Arc::new(AtomicBool::new(false));
         let error = Arc::new(Mutex::new(None));
         let (startup_tx, startup_rx) = mpsc::sync_channel(1);
         let worker_shutdown = Arc::clone(&shutdown);
         let worker_error = Arc::clone(&error);
+        let restart_run_loop = run_loop.clone();
         let handle = thread::Builder::new()
             .name("cl4se-macos-worker".to_owned())
             .spawn(move || {
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    worker_loop(config, queue, &worker_shutdown, startup_tx)
+                    worker_loop(
+                        config,
+                        queue,
+                        &worker_shutdown,
+                        startup_tx,
+                        restart,
+                        restart_run_loop,
+                    )
                 }));
                 let failure = match outcome {
                     Ok(Ok(())) => None,
@@ -288,6 +317,8 @@ fn worker_loop(
     queue: Arc<EventQueue>,
     shutdown: &AtomicBool,
     startup: mpsc::SyncSender<std::result::Result<(), String>>,
+    mut restart: RestartWatcher,
+    run_loop: CFRunLoop,
 ) -> Result<()> {
     let mut provider = MacOsImeStateProvider;
     let mut injector = match MacOsKeyInjector::new() {
@@ -306,6 +337,12 @@ fn worker_loop(
         .map_err(|_| anyhow!("macOS worker startup receiver was dropped"))?;
 
     while !shutdown.load(Ordering::Acquire) {
+        if restart.poll() {
+            log::info!("configuration restart request received");
+            run_loop.stop();
+            return Ok(());
+        }
+
         let Some(queued) = queue.pop() else {
             thread::sleep(WORKER_POLL_INTERVAL);
             continue;
@@ -321,6 +358,10 @@ fn worker_loop(
             Decision::InjectCommitKey(key) => {
                 log::debug!("injecting commit key: {key:?}");
                 injector.inject_commit_key(key)?;
+            }
+            Decision::InjectShiftEnter => {
+                log::debug!("injecting opt-in Shift+Enter idle action");
+                injector.inject_shift_enter()?;
             }
             Decision::PassThroughCapsLock => {
                 log::debug!("attempting macOS Caps Lock modifier-state pass-through");

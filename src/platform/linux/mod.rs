@@ -6,12 +6,13 @@ mod interceptor;
 mod signal;
 mod xkb;
 
-use std::{thread, time::Duration};
+use std::{env, os::unix::process::CommandExt, process::Command, thread, time::Duration};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::{
     config::Config,
+    control::RestartRequest,
     core::{Decision, Engine, Platform},
     platform::{Autostart, KeyInjector},
 };
@@ -23,7 +24,7 @@ use self::{
 
 const POLL_INTERVAL: Duration = Duration::from_millis(5);
 
-pub(super) fn run(config: &Config) -> Result<()> {
+pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     if let Err(error) = xkb::reapply_if_managed() {
         log::warn!(
             "failed to reapply managed caps:none setting: {error:#}; physical Caps Lock may toggle"
@@ -36,9 +37,15 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let mut provider = LinuxImeStateProvider::new();
     let mut engine = Engine::new(config, Platform::Linux);
     let clock = std::time::Instant::now();
+    let mut restart = restart.watcher();
 
     log::info!("Linux evdev monitor and uinput injector initialized; CL4SE is running");
     while !SignalGuard::stop_requested() {
+        if restart.poll() {
+            log::info!("configuration restart request received");
+            break;
+        }
+
         let batch = monitor.poll();
         if batch.state_uncertain {
             engine.reset_composition();
@@ -56,6 +63,14 @@ pub(super) fn run(config: &Config) -> Result<()> {
                     engine.reset_composition();
                     result?;
                 }
+                Decision::InjectShiftEnter => {
+                    log::debug!("injecting opt-in Shift+Enter idle action");
+                    let result = injector.inject_shift_enter();
+                    // The CL4SE uinput device is excluded from observation, so
+                    // keep the core state explicit after our marked sequence.
+                    engine.reset_composition();
+                    result?;
+                }
                 Decision::PassThroughCapsLock => {
                     log::debug!("injecting CapsLock pass-through through uinput");
                     injector.inject_capslock()?;
@@ -69,8 +84,14 @@ pub(super) fn run(config: &Config) -> Result<()> {
     // VirtualDevice is an RAII handle. Returning through this path, early
     // errors, and panic unwinding all destroy it before platform::run catches
     // a panic at the application boundary.
-    log::info!("shutdown requested; dropping uinput device and evdev handles");
+    log::info!("event loop stopped; dropping uinput device and evdev handles");
     Ok(())
+}
+
+pub(super) fn restart_process() -> Result<()> {
+    let executable = env::current_exe().context("failed to locate the CL4SE executable")?;
+    let error = Command::new(executable).arg("run").exec();
+    Err(error).context("failed to replace the CL4SE process")
 }
 
 pub(super) fn install_autostart() -> Result<()> {

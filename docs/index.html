@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="CL4SE (Caps Lock for Safe Enter) は、物理Caps Lockキーで日本語IMEの変換を確定するWindows・macOS・Linux対応の常駐CLIツールです。"
+      content="CL4SE (Caps Lock for Safe Enter) は、物理Caps Lockキーで日本語IMEの変換を確定し、任意設定で非変換時にShift+Enterを入力できるWindows・macOS・Linux対応の常駐CLIツールです。"
     >
     <meta name="theme-color" content="#122126">
     <meta property="og:type" content="website">
     <meta property="og:title" content="CL4SE — Enterを送信に、Caps Lockを確定に。">
     <meta
       property="og:description"
-      content="誤送信を減らすための、フェイルセーフなIME確定ツール。Windows・macOS・Linux対応。"
+      content="IME変換確定と、任意設定のShift+Enter安全改行で誤送信を減らすフェイルセーフなツール。Windows・macOS・Linux対応。"
     >
     <meta
       property="og:url"
@@ -936,7 +936,7 @@
           </h1>
           <p class="hero-copy">
             CL4SE (Caps Lock for Safe Enter) は、Caps Lockキーの挙動を日本語IMEの変換確定で上書きする常駐ツールです。
-            変換確定のつもりでEnterを押し、そのままメッセージを送ってしまう事故を減らします。
+            変換確定のつもりでEnterを押し、そのままメッセージを送ってしまう事故を減らします。必要なら、非変換中のCaps LockをShift+Enterによる安全改行に割り当てられます（初期状態はOFF）。
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#install">コマンドからインストール</a>
@@ -1000,7 +1000,7 @@
               <span class="feature-number">02</span>
               <h3>安心安全設計</h3>
               <p>
-                IMEがオンで、変換中だと判断できる場合だけ確定キーを注入し、不明な状態では何もしないフェイルセーフ設計により、確実に誤送信を防止します。また、オープンソースなので不審なバイナリでないことが検証できます。
+                IMEがオンで、変換中だと判断できる場合だけ確定キーを注入し、不明な状態では何もしないフェイルセーフ設計です。任意設定のShift+Enterも、IME状態が判定済みで非変換中の場合だけ動作します。また、オープンソースなので不審なバイナリでないことが検証できます。
               </p>
             </article>
             <article class="feature-card">
@@ -1030,12 +1030,12 @@
             </li>
             <li>
               <span class="decision-signal" aria-hidden="true"></span>
-              <span><strong>IMEオン + 非変換中</strong><br><span class="decision-label">入力は確定済み</span></span>
-              <span class="decision-action">DO NOTHING</span>
+              <span><strong>IME判定済み + 非変換中</strong><br><span class="decision-label">設定有効時だけ安全改行</span></span>
+              <span class="decision-action">SHIFT+ENTER</span>
             </li>
             <li>
               <span class="decision-signal" aria-hidden="true"></span>
-              <span><strong>IMEオフ / 状態不明</strong><br><span class="decision-label">誤注入を避ける</span></span>
+              <span><strong>IME状態不明</strong><br><span class="decision-label">設定にかかわらず誤注入を避ける</span></span>
               <span class="decision-action">DO NOTHING</span>
             </li>
           </ul>
@@ -1242,6 +1242,9 @@
               >ReleaseとSHA256SUMSを見る ↗</a>
             </div>
           </div>
+          <p class="panel-note">
+            Shift+Enterによる安全改行は初期状態ではOFFです。<code>cl4se setting idle-action shift-enter</code> で有効、<code>cl4se setting idle-action none</code> で無効にでき、実行中のCL4SEは安全に自動再起動します。利用するチャットアプリでShift+Enterが「送信せず改行」になることを確認してから有効にしてください。
+          </p>
         </div>
       </section>
 

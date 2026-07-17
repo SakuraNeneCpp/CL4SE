@@ -67,6 +67,7 @@ pub enum ObservedEvent {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Decision {
     InjectCommitKey(CommitKey),
+    InjectShiftEnter,
     PassThroughCapsLock,
     Suppress,
     Ignore,
@@ -145,8 +146,12 @@ impl Engine {
                         snapshot.ime_id.as_deref(),
                         self.platform,
                     ))
-                } else {
+                } else if snapshot.active != ImeGuess::Unknown && !self.tracker.is_composing() {
                     self.idle_decision()
+                } else {
+                    // Unknown must never authorize an injected key, including
+                    // the opt-in Shift+Enter idle action.
+                    Decision::Suppress
                 };
                 Self::log_trigger_decision(decision)
             }
@@ -196,6 +201,7 @@ impl Engine {
     fn idle_decision(&self) -> Decision {
         match self.idle_action {
             IdleAction::None => Decision::Suppress,
+            IdleAction::ShiftEnter => Decision::InjectShiftEnter,
             IdleAction::CapsLock => Decision::PassThroughCapsLock,
         }
     }
@@ -343,31 +349,55 @@ mod tests {
     }
 
     #[test]
+    fn shift_enter_idle_action_requires_known_idle_state() {
+        for active in [ImeGuess::Yes, ImeGuess::No] {
+            let mut engine = Engine::new(&config(IdleAction::ShiftEnter, true), Platform::Linux);
+            let mut provider = MockImeStateProvider::new(active, None);
+
+            assert_eq!(
+                engine.handle_event(trigger(), &mut provider, Duration::ZERO),
+                Decision::InjectShiftEnter
+            );
+            assert!(!engine.is_composing());
+        }
+    }
+
+    #[test]
+    fn composing_state_commits_even_when_shift_enter_idle_action_is_enabled() {
+        let mut engine = Engine::new(&config(IdleAction::ShiftEnter, true), Platform::Linux);
+        let mut provider = MockImeStateProvider::new(ImeGuess::Yes, None);
+        start_composing(&mut engine, &mut provider);
+
+        assert_eq!(
+            engine.handle_event(trigger(), &mut provider, Duration::from_secs(1)),
+            Decision::InjectCommitKey(CommitKey::Enter)
+        );
+    }
+
+    #[test]
     fn decision_table_no_uses_idle_action_even_if_tracker_was_composing() {
-        let mut engine = Engine::new(&config(IdleAction::None, true), Platform::Linux);
+        let mut engine = Engine::new(&config(IdleAction::ShiftEnter, true), Platform::Linux);
         let mut provider = MockImeStateProvider::new(ImeGuess::Yes, None);
         start_composing(&mut engine, &mut provider);
         provider.snapshot.active = ImeGuess::No;
 
         assert_eq!(
             engine.handle_event(trigger(), &mut provider, Duration::from_secs(1)),
-            Decision::Suppress
+            Decision::InjectShiftEnter
         );
         assert!(!engine.is_composing());
     }
 
     #[test]
-    fn decision_table_no_or_unknown_while_idle_uses_idle_action() {
-        for active in [ImeGuess::No, ImeGuess::Unknown] {
-            let mut engine = Engine::new(&config(IdleAction::CapsLock, true), Platform::Linux);
-            let mut provider = MockImeStateProvider::new(active, None);
+    fn decision_table_no_while_idle_uses_idle_action() {
+        let mut engine = Engine::new(&config(IdleAction::CapsLock, true), Platform::Linux);
+        let mut provider = MockImeStateProvider::new(ImeGuess::No, None);
 
-            assert_eq!(
-                engine.handle_event(trigger(), &mut provider, Duration::ZERO),
-                Decision::PassThroughCapsLock
-            );
-            assert!(!engine.is_composing());
-        }
+        assert_eq!(
+            engine.handle_event(trigger(), &mut provider, Duration::ZERO),
+            Decision::PassThroughCapsLock
+        );
+        assert!(!engine.is_composing());
     }
 
     #[test]
@@ -382,6 +412,20 @@ mod tests {
             Decision::Suppress
         );
         assert!(!engine.is_composing());
+    }
+
+    #[test]
+    fn unknown_never_runs_an_injecting_idle_action() {
+        for idle_action in [IdleAction::ShiftEnter, IdleAction::CapsLock] {
+            let mut engine = Engine::new(&config(idle_action, true), Platform::Linux);
+            let mut provider = MockImeStateProvider::new(ImeGuess::Unknown, None);
+
+            assert_eq!(
+                engine.handle_event(trigger(), &mut provider, Duration::ZERO),
+                Decision::Suppress
+            );
+            assert!(!engine.is_composing());
+        }
     }
 
     #[test]

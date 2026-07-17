@@ -12,6 +12,20 @@ fn version_is_available() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn setting_help_lists_safe_idle_actions() -> Result<(), Box<dyn Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_cl4se"))
+        .args(["setting", "idle-action", "--help"])
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    assert!(output.status.success());
+    assert!(stdout.contains("none"));
+    assert!(stdout.contains("shift-enter"));
+    assert!(stdout.contains("capslock"));
+    Ok(())
+}
+
+#[test]
 #[cfg(target_os = "linux")]
 fn doctor_runs_linux_diagnostics() -> Result<(), Box<dyn Error>> {
     let output = Command::new(env!("CARGO_BIN_EXE_cl4se"))

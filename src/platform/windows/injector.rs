@@ -3,7 +3,7 @@ use std::mem::size_of;
 use anyhow::{bail, Result};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
-    VK_CAPITAL, VK_CONTROL, VK_RETURN,
+    VK_CAPITAL, VK_CONTROL, VK_RETURN, VK_SHIFT,
 };
 
 use crate::{
@@ -27,7 +27,7 @@ impl WindowsKeyInjector {
             } else {
                 // SAFETY: Recovery contains only marked key-up events for keys
                 // already allowed in this sequence. It prevents a partial
-                // SendInput result from leaving Enter, M, Ctrl, or Caps held.
+                // SendInput result from leaving Enter, M, Ctrl, Shift, or Caps held.
                 unsafe { SendInput(recovery_key_ups, size_of::<INPUT>() as i32) }
             };
             bail!(
@@ -46,6 +46,10 @@ impl KeyInjector for WindowsKeyInjector {
             CommitKey::Enter => Self::send(&enter_inputs(), &enter_recovery()),
             CommitKey::CtrlM => Self::send(&ctrl_m_inputs(), &ctrl_m_recovery()),
         }
+    }
+
+    fn inject_shift_enter(&mut self) -> Result<()> {
+        Self::send(&shift_enter_inputs(), &shift_enter_recovery())
     }
 
     fn inject_capslock(&mut self) -> Result<()> {
@@ -69,6 +73,15 @@ fn ctrl_m_inputs() -> [INPUT; 4] {
     ]
 }
 
+fn shift_enter_inputs() -> [INPUT; 4] {
+    [
+        keyboard_input(VK_SHIFT, KEYBD_EVENT_FLAGS(0)),
+        keyboard_input(VK_RETURN, KEYBD_EVENT_FLAGS(0)),
+        keyboard_input(VK_RETURN, KEYEVENTF_KEYUP),
+        keyboard_input(VK_SHIFT, KEYEVENTF_KEYUP),
+    ]
+}
+
 fn capslock_inputs() -> [INPUT; 2] {
     [
         keyboard_input(VK_CAPITAL, KEYBD_EVENT_FLAGS(0)),
@@ -84,6 +97,13 @@ fn ctrl_m_recovery() -> [INPUT; 2] {
     [
         keyboard_input(VK_M, KEYEVENTF_KEYUP),
         keyboard_input(VK_CONTROL, KEYEVENTF_KEYUP),
+    ]
+}
+
+fn shift_enter_recovery() -> [INPUT; 2] {
+    [
+        keyboard_input(VK_RETURN, KEYEVENTF_KEYUP),
+        keyboard_input(VK_SHIFT, KEYEVENTF_KEYUP),
     ]
 }
 
@@ -118,9 +138,11 @@ mod tests {
         for input in enter_inputs()
             .into_iter()
             .chain(ctrl_m_inputs())
+            .chain(shift_enter_inputs())
             .chain(capslock_inputs())
             .chain(enter_recovery())
             .chain(ctrl_m_recovery())
+            .chain(shift_enter_recovery())
             .chain(capslock_recovery())
         {
             // SAFETY: keyboard_input initializes the active INPUT union member
@@ -142,6 +164,25 @@ mod tests {
         for (input, (expected_key, expected_flags)) in inputs.into_iter().zip(expected) {
             // SAFETY: ctrl_m_inputs initializes every active union member as
             // KEYBDINPUT because each INPUT type is INPUT_KEYBOARD.
+            let keyboard = unsafe { input.Anonymous.ki };
+            assert_eq!(keyboard.wVk, expected_key);
+            assert_eq!(keyboard.dwFlags, expected_flags);
+        }
+    }
+
+    #[test]
+    fn shift_enter_sequence_is_balanced_and_ordered() {
+        let inputs = shift_enter_inputs();
+        let expected = [
+            (VK_SHIFT, KEYBD_EVENT_FLAGS(0)),
+            (VK_RETURN, KEYBD_EVENT_FLAGS(0)),
+            (VK_RETURN, KEYEVENTF_KEYUP),
+            (VK_SHIFT, KEYEVENTF_KEYUP),
+        ];
+
+        for (input, (expected_key, expected_flags)) in inputs.into_iter().zip(expected) {
+            // SAFETY: shift_enter_inputs initializes every active union member
+            // as KEYBDINPUT because each INPUT type is INPUT_KEYBOARD.
             let keyboard = unsafe { input.Anonymous.ki };
             assert_eq!(keyboard.wVk, expected_key);
             assert_eq!(keyboard.dwFlags, expected_flags);

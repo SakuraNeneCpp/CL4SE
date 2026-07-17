@@ -10,6 +10,8 @@ CL4SE の主な変更をこのファイルに記録する。
 
 ### Added
 
+- 設定の表示・変更と稼働中プロセスの安全な自動再起動を行う `cl4se setting` コマンド。
+- 非変換中のCaps LockでShift+Enterを注入する、既定OFFの `idle_action = "shift_enter"`。
 - 物理 Caps Lock に安全側のIME確定判定を割り当てる共通EngineとCompositionTracker。
 - Windowsの低レベルフック、IME状態取得、キー注入、HKCU自動起動、doctor。
 - macOSのhidutilリマップ、CGEventTap、TIS判定、LaunchAgent自動起動、TCC/hidutil doctor。

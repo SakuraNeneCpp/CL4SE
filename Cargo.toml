@@ -2,7 +2,7 @@
 name = "cl4se"
 version = "1.0.0"
 edition = "2021"
-description = "Caps Lock for Safe Enter: assign IME commit to the physical Caps Lock key"
+description = "Caps Lock for Safe Enter: assign IME commit and optional Shift+Enter to Caps Lock"
 
 [dependencies]
 anyhow = "1"

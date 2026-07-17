@@ -8,7 +8,7 @@ use crate::{core::CommitKey, platform::KeyInjector};
 
 pub(crate) const VIRTUAL_DEVICE_NAME: &str = "CL4SE Virtual Keyboard";
 const VIRTUAL_VENDOR: u16 = 0x434c;
-const VIRTUAL_PRODUCT: u16 = 0x494d;
+const VIRTUAL_PRODUCT: u16 = 0x3453;
 const VIRTUAL_VERSION: u16 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,6 +47,25 @@ const CTRL_M_SEQUENCE: [KeyStroke; 4] = [
     },
 ];
 
+const SHIFT_ENTER_SEQUENCE: [KeyStroke; 4] = [
+    KeyStroke {
+        key: KeyCode::KEY_LEFTSHIFT,
+        value: 1,
+    },
+    KeyStroke {
+        key: KeyCode::KEY_ENTER,
+        value: 1,
+    },
+    KeyStroke {
+        key: KeyCode::KEY_ENTER,
+        value: 0,
+    },
+    KeyStroke {
+        key: KeyCode::KEY_LEFTSHIFT,
+        value: 0,
+    },
+];
+
 const CAPS_LOCK_SEQUENCE: [KeyStroke; 2] = [
     KeyStroke {
         key: KeyCode::KEY_CAPSLOCK,
@@ -68,6 +87,7 @@ impl LinuxKeyInjector {
         for key in [
             KeyCode::KEY_ENTER,
             KeyCode::KEY_LEFTCTRL,
+            KeyCode::KEY_LEFTSHIFT,
             KeyCode::KEY_M,
             KeyCode::KEY_CAPSLOCK,
         ] {
@@ -102,6 +122,10 @@ impl KeyInjector for LinuxKeyInjector {
             CommitKey::Enter => self.emit(&ENTER_SEQUENCE),
             CommitKey::CtrlM => self.emit(&CTRL_M_SEQUENCE),
         }
+    }
+
+    fn inject_shift_enter(&mut self) -> Result<()> {
+        self.emit(&SHIFT_ENTER_SEQUENCE)
     }
 
     fn inject_capslock(&mut self) -> Result<()> {
@@ -156,6 +180,19 @@ mod tests {
                 (KeyCode::KEY_M.0, 1),
                 (KeyCode::KEY_M.0, 0),
                 (KeyCode::KEY_LEFTCTRL.0, 0),
+            ]
+        );
+    }
+
+    #[test]
+    fn shift_enter_sequence_is_balanced_and_ordered() {
+        assert_eq!(
+            SHIFT_ENTER_SEQUENCE.map(|stroke| (stroke.key.0, stroke.value)),
+            [
+                (KeyCode::KEY_LEFTSHIFT.0, 1),
+                (KeyCode::KEY_ENTER.0, 1),
+                (KeyCode::KEY_ENTER.0, 0),
+                (KeyCode::KEY_LEFTSHIFT.0, 0),
             ]
         );
     }

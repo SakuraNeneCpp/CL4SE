@@ -9,7 +9,7 @@ use crate::{
     platform::{macos::modifier_lock::ModifierLock, KeyInjector},
 };
 
-pub(crate) const INJECTION_MARKER: i64 = 0x434c_494d;
+pub(crate) const INJECTION_MARKER: i64 = 0x434c_3453;
 
 pub(crate) struct MacOsKeyInjector {
     source: CGEventSource,
@@ -37,7 +37,7 @@ impl MacOsKeyInjector {
 
     fn post_sequence(&self, sequence: &[KeyStroke]) -> Result<()> {
         // Construct every event before posting any of them. A construction
-        // failure therefore cannot leave Ctrl, M, or Enter logically held.
+        // failure therefore cannot leave Ctrl, Shift, M, or Enter logically held.
         let events = sequence
             .iter()
             .map(|stroke| self.create_event(*stroke))
@@ -64,6 +64,10 @@ impl KeyInjector for MacOsKeyInjector {
             CommitKey::Enter => self.post_sequence(&enter_sequence()),
             CommitKey::CtrlM => self.post_sequence(&ctrl_m_sequence()),
         }
+    }
+
+    fn inject_shift_enter(&mut self) -> Result<()> {
+        self.post_sequence(&shift_enter_sequence())
     }
 
     fn inject_capslock(&mut self) -> Result<()> {
@@ -125,6 +129,31 @@ fn ctrl_m_sequence() -> [KeyStroke; 4] {
     ]
 }
 
+fn shift_enter_sequence() -> [KeyStroke; 4] {
+    [
+        KeyStroke {
+            keycode: KeyCode::SHIFT,
+            key_down: true,
+            flags: CGEventFlags::CGEventFlagShift,
+        },
+        KeyStroke {
+            keycode: KeyCode::RETURN,
+            key_down: true,
+            flags: CGEventFlags::CGEventFlagShift,
+        },
+        KeyStroke {
+            keycode: KeyCode::RETURN,
+            key_down: false,
+            flags: CGEventFlags::CGEventFlagShift,
+        },
+        KeyStroke {
+            keycode: KeyCode::SHIFT,
+            key_down: false,
+            flags: CGEventFlags::empty(),
+        },
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,6 +182,24 @@ mod tests {
         assert!(sequence[0].flags.contains(CGEventFlags::CGEventFlagControl));
         assert!(sequence[1].flags.contains(CGEventFlags::CGEventFlagControl));
         assert!(sequence[2].flags.contains(CGEventFlags::CGEventFlagControl));
+        assert!(sequence[3].flags.is_empty());
+    }
+
+    #[test]
+    fn shift_enter_sequence_is_balanced_and_ordered() {
+        let sequence = shift_enter_sequence();
+        assert_eq!(
+            sequence.map(|stroke| (stroke.keycode, stroke.key_down)),
+            [
+                (KeyCode::SHIFT, true),
+                (KeyCode::RETURN, true),
+                (KeyCode::RETURN, false),
+                (KeyCode::SHIFT, false),
+            ]
+        );
+        assert!(sequence[0].flags.contains(CGEventFlags::CGEventFlagShift));
+        assert!(sequence[1].flags.contains(CGEventFlags::CGEventFlagShift));
+        assert!(sequence[2].flags.contains(CGEventFlags::CGEventFlagShift));
         assert!(sequence[3].flags.is_empty());
     }
 }

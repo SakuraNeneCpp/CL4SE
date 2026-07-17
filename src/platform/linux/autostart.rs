@@ -136,14 +136,14 @@ fn require_success(output: Output, command: &str) -> Result<()> {
 fn systemd_unit(executable: &Path) -> Result<String> {
     let executable = quote_systemd(executable)?;
     Ok(format!(
-        "[Unit]\nDescription=CL4SE Caps Lock IME commit\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart={executable} run\nRestart=on-failure\nRestartSec=2\n\n[Install]\nWantedBy=default.target\n"
+        "[Unit]\nDescription=CL4SE Caps Lock for Safe Enter\nAfter=graphical-session.target\n\n[Service]\nType=simple\nExecStart={executable} run\nRestart=on-failure\nRestartSec=2\n\n[Install]\nWantedBy=default.target\n"
     ))
 }
 
 fn xdg_desktop_entry(executable: &Path) -> Result<String> {
     let executable = quote_desktop_exec(executable)?;
     Ok(format!(
-        "[Desktop Entry]\nType=Application\nName=CL4SE\nComment=Assign IME commit to the physical Caps Lock key\nExec={executable} run\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
+        "[Desktop Entry]\nType=Application\nName=CL4SE\nComment=Caps Lock for Safe Enter\nExec={executable} run\nTerminal=false\nX-GNOME-Autostart-enabled=true\n"
     ))
 }
 

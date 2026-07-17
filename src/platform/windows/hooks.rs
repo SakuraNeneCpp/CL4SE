@@ -28,7 +28,7 @@ use windows::Win32::{
 
 use crate::core::ObservedEvent;
 
-pub(crate) const INJECTION_MARKER: usize = 0x434c_494d;
+pub(crate) const INJECTION_MARKER: usize = 0x434c_3453;
 const CAPS_LOCK_SCAN_CODE: u32 = 0x3a;
 const KEY_STATE_COUNT: usize = 256;
 

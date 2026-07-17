@@ -1,13 +1,19 @@
 use std::time::Duration;
 
 use cl4se::{
-    config::Config,
+    config::{Config, IdleAction},
     core::{CommitKey, Decision, Engine, ImeGuess, ImeSnapshot, ObservedEvent, Platform},
     platform::ImeStateProvider,
 };
 
 struct MockImeStateProvider {
     snapshot: ImeSnapshot,
+}
+
+fn shift_enter_config() -> Config {
+    let mut config = Config::default();
+    config.general.idle_action = IdleAction::ShiftEnter;
+    config
 }
 
 impl MockImeStateProvider {
@@ -98,6 +104,36 @@ fn t4_caps_lock_after_click_does_nothing() {
     );
     assert_eq!(
         engine.handle_event(caps_lock(), &mut ime, Duration::from_millis(11)),
+        Decision::Suppress
+    );
+}
+
+#[test]
+fn t10_opt_in_shift_enter_runs_only_for_known_non_composing_state() {
+    for active in [ImeGuess::Yes, ImeGuess::No] {
+        let mut engine = Engine::new(&shift_enter_config(), Platform::Linux);
+        let mut ime = MockImeStateProvider {
+            snapshot: ImeSnapshot {
+                active,
+                ime_id: None,
+            },
+        };
+
+        assert_eq!(
+            engine.handle_event(caps_lock(), &mut ime, Duration::ZERO),
+            Decision::InjectShiftEnter
+        );
+    }
+
+    let mut engine = Engine::new(&shift_enter_config(), Platform::Linux);
+    let mut unknown_ime = MockImeStateProvider {
+        snapshot: ImeSnapshot {
+            active: ImeGuess::Unknown,
+            ime_id: None,
+        },
+    };
+    assert_eq!(
+        engine.handle_event(caps_lock(), &mut unknown_ime, Duration::ZERO),
         Decision::Suppress
     );
 }

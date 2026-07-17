@@ -5,7 +5,9 @@ mod injector;
 
 use std::{
     any::Any,
+    env,
     ffi::c_void,
+    process::Command,
     sync::{
         atomic::{AtomicBool, AtomicPtr, AtomicU32, Ordering},
         Arc, Mutex,
@@ -35,6 +37,7 @@ use windows::{
 
 use crate::{
     config::Config,
+    control::{RestartRequest, RestartWatcher},
     core::{Decision, Engine, ImeGuess, Platform},
     platform::{Autostart, ImeStateProvider, KeyInjector},
 };
@@ -52,7 +55,7 @@ static HOOK_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 static CLEANUP_EVENT: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 const CONSOLE_CLEANUP_WAIT_MS: u32 = 4_000;
 
-pub(super) fn run(config: &Config) -> Result<()> {
+pub(super) fn run(config: &Config, restart: &RestartRequest) -> Result<()> {
     let mut message = MSG::default();
     // SAFETY: message points to valid storage. PM_NOREMOVE creates this thread's
     // message queue without removing or dispatching any message.
@@ -63,7 +66,12 @@ pub(super) fn run(config: &Config) -> Result<()> {
     let event_queue = Arc::new(EventQueue::new(EVENT_QUEUE_CAPACITY));
     hooks::set_event_queue(Arc::clone(&event_queue))?;
     let console = ConsoleCtrlGuard::install(hook_thread_id)?;
-    let worker = WorkerGuard::start(config.clone(), event_queue, hook_thread_id)?;
+    let worker = WorkerGuard::start(
+        config.clone(),
+        event_queue,
+        hook_thread_id,
+        restart.watcher(),
+    )?;
     let hooks = WindowsHooks::install()?;
     let capture = CaptureGuard::enable();
 
@@ -80,6 +88,15 @@ pub(super) fn run(config: &Config) -> Result<()> {
     log::info!("Windows hooks removed; CL4SE stopped");
 
     loop_result.and(worker_result)
+}
+
+pub(super) fn restart_process() -> Result<()> {
+    let executable = env::current_exe().context("failed to locate cl4se executable for restart")?;
+    Command::new(executable)
+        .arg("run")
+        .spawn()
+        .context("failed to restart CL4SE on Windows")?;
+    Ok(())
 }
 
 pub(super) fn install_autostart() -> Result<()> {
@@ -184,7 +201,12 @@ struct WorkerGuard {
 }
 
 impl WorkerGuard {
-    fn start(config: Config, event_queue: Arc<EventQueue>, hook_thread_id: u32) -> Result<Self> {
+    fn start(
+        config: Config,
+        event_queue: Arc<EventQueue>,
+        hook_thread_id: u32,
+        restart: RestartWatcher,
+    ) -> Result<Self> {
         let shutdown = Arc::new(AtomicBool::new(false));
         let error = Arc::new(Mutex::new(None));
         let worker_shutdown = Arc::clone(&shutdown);
@@ -193,7 +215,13 @@ impl WorkerGuard {
             .name("cl4se-windows-worker".to_owned())
             .spawn(move || {
                 let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    worker_loop(config, event_queue, &worker_shutdown)
+                    worker_loop(
+                        config,
+                        event_queue,
+                        &worker_shutdown,
+                        hook_thread_id,
+                        restart,
+                    )
                 }));
                 let failure = match outcome {
                     Ok(Ok(())) => None,
@@ -254,7 +282,13 @@ impl Drop for WorkerGuard {
     }
 }
 
-fn worker_loop(config: Config, event_queue: Arc<EventQueue>, shutdown: &AtomicBool) -> Result<()> {
+fn worker_loop(
+    config: Config,
+    event_queue: Arc<EventQueue>,
+    shutdown: &AtomicBool,
+    hook_thread_id: u32,
+    mut restart: RestartWatcher,
+) -> Result<()> {
     let _com = ComApartment::initialize()?;
     let mut provider = WindowsImeStateProvider::new();
     let mut injector = WindowsKeyInjector;
@@ -263,6 +297,15 @@ fn worker_loop(config: Config, event_queue: Arc<EventQueue>, shutdown: &AtomicBo
     let mut generation = hooks::current_generation();
 
     while !shutdown.load(Ordering::Acquire) {
+        if restart.poll() {
+            log::info!("configuration restart request received");
+            // SAFETY: hook_thread_id identifies the run thread whose message
+            // queue was created before this worker started.
+            unsafe { PostThreadMessageW(hook_thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) }
+                .context("failed to stop the Windows message loop for restart")?;
+            return Ok(());
+        }
+
         let Some(queued) = event_queue.pop() else {
             thread::sleep(WORKER_POLL_INTERVAL);
             continue;
@@ -278,6 +321,10 @@ fn worker_loop(config: Config, event_queue: Arc<EventQueue>, shutdown: &AtomicBo
             Decision::InjectCommitKey(key) => {
                 log::debug!("injecting commit key: {key:?}");
                 injector.inject_commit_key(key)?;
+            }
+            Decision::InjectShiftEnter => {
+                log::debug!("injecting opt-in Shift+Enter idle action");
+                injector.inject_shift_enter()?;
             }
             Decision::PassThroughCapsLock => {
                 log::debug!("injecting marked CapsLock pass-through");
