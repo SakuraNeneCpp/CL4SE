@@ -1,4 +1,4 @@
-# CLIME — Caps Lock IME commit
+# CL4SE — Caps Lock for Safe Enter
 
 エンターキーがメッセージの送信に割り当てられがちなので, IME確定をエンターキーでやるとよく誤送信する. そこでCaps LockにIME確定を割り当てるキーバインドツールを作る.
 
