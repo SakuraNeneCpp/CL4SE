@@ -304,10 +304,10 @@ pub trait Autostart {
 | キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。リピート状態もCapsLock専用のscanCode状態で追跡し、vkCodeに依存しない。戻り値1で抑止 |
 | マウス観測 | `WH_MOUSE_LL`(クリックのみ、Composingリセット用) |
 | フォーカス観測 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` |
-| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で送信。フォーカス窓を取得できない場合は前面トップレベル窓へフォールバック。解決中に前面窓が変化・応答なし・IMEウィンドウなし → `Unknown` |
+| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で送信。フォーカス窓でIMEウィンドウを取得できない・応答がない場合は、同じGUIスレッドの前面トップレベル窓へフォールバック。両方で取得不能、または解決中に前面窓が変化 → `Unknown` |
 | `ime_id` | TSF `ITfInputProcessorProfileMgr::GetActiveProfile` でアクティブ入力プロファイルを取得し、MS-IME / Google 日本語入力の CLSID と照合(**要検証**: 呼び出し方法と各CLSID値)。取得不能は `None`(→ Enter に解決) |
 | キー注入 | `SendInput`(確定用VK_RETURN / VK_CONTROL + `M`、任意設定の安全改行用VK_SHIFT + VK_RETURNの一連)。`dwExtraInfo` に自前マーカー。フック側は `LLKHF_INJECTED` + マーカーで自イベントを無視 |
-| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" run` |
+| 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" start`。`start` がウィンドウなしの `run` プロセスを生成して終了 |
 | 権限 | 管理者権限不要。UACセキュアデスクトップではフックが効かないが実害なし |
 | 注意 | フックコールバック内は最小処理(重い処理はチャネルでワーカーへ)。フックはメッセージループ必須 |
 
@@ -430,7 +430,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | T4 | 変換中にマウスで別の場所をクリック → Caps Lock | 何も起きない(トラッカーがリセット済み) |
 | T5 | Shift + Caps Lock | 本来のcapsトグルが効く(macOSは§3.2の範囲で) |
 | T6 | チャットアプリ(Slack/Discord等)で変換→Caps Lock確定→Enter | 確定と送信が意図通り分離される |
-| T7 | `cl4se install-autostart` → 再ログイン | 自動起動している。`uninstall-autostart` で解除される |
+| T7 | `cl4se install-autostart` → 再ログイン | ウィンドウなしでバックグラウンド自動起動している。`uninstall-autostart` で解除される |
 | T8 | プロセスをkill → キーボードが完全に正常に戻る | 残留リマップ・フックなし(macOSは `doctor` で復元確認) |
 | T9 | `RUST_LOG=debug` で変換中に Caps Lock(MS-IME / Google日本語入力 / mozc 環境と、許可リスト外のIME環境) | ログ上の解決キーが §1.3 の許可リスト通り(前者は Ctrl+M、後者と macOS は Enter)。いずれも確定に成功する |
 | T10 | `cl4se start` で起動し、実行中に `cl4se setting idle-action shift-enter` を実行。(a)IMEオン・非変換中、(b)IMEオフ、(c)IME状態を取得できないアプリでCaps Lock。終了後は `cl4se setting idle-action none` → `cl4se stop` → `cl4se start` | 同じPID・バックグラウンドプロセスのままフック・リマップ・uinputを安全に再初期化する。(a)(b)はShift+Enterとして改行され、送信されない。(c)は何も起きない。`stop` はクリーンアップ完了後に戻り、以後のキー入力でログが増えない。再度 `start` するとバックグラウンドで動作を再開する |
@@ -456,3 +456,9 @@ cargo check --target x86_64-unknown-linux-gnu
 - Ctrl+M 許可リストの拡充(macOS標準IM・Google 日本語入力(macOS)・ATOK の実機検証後に追加)
 - アプリ別プロファイル
 - インストーラ(MSI / pkg / deb・rpm)
+
+---
+
+## ライセンス
+
+CL4SE は [MIT License](LICENSE) で公開しています。

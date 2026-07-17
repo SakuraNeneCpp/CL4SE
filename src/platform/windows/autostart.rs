@@ -91,7 +91,7 @@ impl Drop for RegistryKey {
 }
 
 fn autostart_command(executable: &Path) -> String {
-    format!("\"{}\" run", executable.display())
+    format!("\"{}\" start", executable.display())
 }
 
 #[cfg(test)]
@@ -99,10 +99,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn autostart_command_quotes_executable_path() {
+    fn autostart_command_uses_background_start_and_quotes_executable_path() {
         assert_eq!(
             autostart_command(Path::new(r"C:\Program Files\CL4SE\cl4se.exe")),
-            r#""C:\Program Files\CL4SE\cl4se.exe" run"#
+            r#""C:\Program Files\CL4SE\cl4se.exe" start"#
         );
     }
 }

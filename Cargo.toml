@@ -3,6 +3,9 @@ name = "cl4se"
 version = "1.0.0"
 edition = "2021"
 description = "Caps Lock for Safe Enter: assign IME commit and optional Shift+Enter to Caps Lock"
+license = "MIT"
+repository = "https://github.com/SakuraNeneCpp/CL4SE"
+homepage = "https://sakuranenecpp.github.io/CL4SE/"
 
 [dependencies]
 anyhow = "1"

@@ -94,33 +94,19 @@ impl WindowsImeStateProvider {
     }
 
     fn active_guess() -> ImeGuess {
-        let Some(ime_window) = foreground_ime_window() else {
+        let Some(input_windows) = foreground_input_windows() else {
             return ImeGuess::Unknown;
         };
 
-        let mut open_status = 0usize;
-        // SAFETY: ime_window is returned by ImmGetDefaultIMEWnd. The output
-        // pointer remains valid for this bounded synchronous call. SMTO flags
-        // and the 100 ms timeout prevent a hung target from blocking the worker.
-        let delivered = unsafe {
-            SendMessageTimeoutW(
-                ime_window,
-                WM_IME_CONTROL,
-                WPARAM(IMC_GETOPENSTATUS),
-                LPARAM(0),
-                SMTO_ABORTIFHUNG | SMTO_BLOCK,
-                IME_QUERY_TIMEOUT_MS,
-                Some(&mut open_status),
-            )
-        };
-        if delivered.0 == 0 {
-            return ImeGuess::Unknown;
-        }
+        let guess = query_active_guess(&input_windows, default_ime_window, query_ime_open_status);
 
-        if open_status == 0 {
-            ImeGuess::No
+        // The worker may have waited for a foreign IME window to answer. A
+        // changed foreground invalidates the result rather than risking an
+        // action based on the previous application.
+        if foreground_is_still(input_windows.foreground) {
+            guess
         } else {
-            ImeGuess::Yes
+            ImeGuess::Unknown
         }
     }
 
@@ -134,6 +120,69 @@ impl WindowsImeStateProvider {
 
         recognized_ime_id(&profile).map(str::to_owned)
     }
+}
+
+fn query_ime_open_status(ime_window: HWND) -> Option<bool> {
+    let mut open_status = 0usize;
+    // SAFETY: ime_window is returned by ImmGetDefaultIMEWnd. The output
+    // pointer remains valid for this bounded synchronous call. SMTO flags
+    // and the 100 ms timeout prevent a hung target from blocking the worker.
+    let delivered = unsafe {
+        SendMessageTimeoutW(
+            ime_window,
+            WM_IME_CONTROL,
+            WPARAM(IMC_GETOPENSTATUS),
+            LPARAM(0),
+            SMTO_ABORTIFHUNG | SMTO_BLOCK,
+            IME_QUERY_TIMEOUT_MS,
+            Some(&mut open_status),
+        )
+    };
+    (delivered.0 != 0).then_some(open_status != 0)
+}
+
+fn query_active_guess(
+    input_windows: &ForegroundInputWindows,
+    mut ime_window_for: impl FnMut(HWND) -> Option<HWND>,
+    mut open_status_for: impl FnMut(HWND) -> Option<bool>,
+) -> ImeGuess {
+    for input_window in input_windows.candidates().into_iter().flatten() {
+        let Some(ime_window) = ime_window_for(input_window) else {
+            continue;
+        };
+        let Some(is_open) = open_status_for(ime_window) else {
+            continue;
+        };
+        return if is_open { ImeGuess::Yes } else { ImeGuess::No };
+    }
+
+    ImeGuess::Unknown
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ForegroundInputWindows {
+    foreground: HWND,
+    focused: Option<HWND>,
+}
+
+impl ForegroundInputWindows {
+    fn candidates(self) -> [Option<HWND>; 2] {
+        let focused = self.focused.filter(|focused| *focused != self.foreground);
+        [focused, Some(self.foreground)]
+    }
+}
+
+fn default_ime_window(input_window: HWND) -> Option<HWND> {
+    // SAFETY: input_window is a non-null HWND returned by Windows. The result
+    // is a borrowed IME window handle that CL4SE only checks and queries.
+    let ime_window = unsafe { ImmGetDefaultIMEWnd(input_window) };
+    (!ime_window.0.is_null()).then_some(ime_window)
+}
+
+fn foreground_is_still(expected: HWND) -> bool {
+    // SAFETY: GetForegroundWindow has no preconditions and returns a borrowed
+    // handle managed by Windows.
+    unsafe { GetForegroundWindow() == expected }
 }
 
 fn recognized_ime_id(profile: &TF_INPUTPROCESSORPROFILE) -> Option<&'static str> {
@@ -161,14 +210,17 @@ impl ImeStateProvider for WindowsImeStateProvider {
 }
 
 fn foreground_ime_window() -> Option<HWND> {
-    let input_window = foreground_input_window()?;
-    // SAFETY: input_window is a non-null HWND returned by Windows. The result
-    // is a borrowed IME window handle that CL4SE only checks and queries.
-    let ime_window = unsafe { ImmGetDefaultIMEWnd(input_window) };
-    (!ime_window.0.is_null()).then_some(ime_window)
+    let input_windows = foreground_input_windows()?;
+    let ime_window = input_windows
+        .candidates()
+        .into_iter()
+        .flatten()
+        .find_map(default_ime_window)?;
+
+    foreground_is_still(input_windows.foreground).then_some(ime_window)
 }
 
-fn foreground_input_window() -> Option<HWND> {
+fn foreground_input_windows() -> Option<ForegroundInputWindows> {
     // SAFETY: GetForegroundWindow has no preconditions and returns a borrowed
     // handle managed by Windows.
     let foreground = unsafe { GetForegroundWindow() };
@@ -195,13 +247,14 @@ fn foreground_input_window() -> Option<HWND> {
 
     // A focus switch during resolution could pair an old HWND with a new IME
     // state. Treat that race as uncertainty instead of risking a false commit.
-    // SAFETY: GetForegroundWindow has no preconditions.
-    let foreground_after_resolution = unsafe { GetForegroundWindow() };
-    if foreground_after_resolution != foreground {
+    if !foreground_is_still(foreground) {
         return None;
     }
 
-    Some(focused.unwrap_or(foreground))
+    Some(ForegroundInputWindows {
+        foreground,
+        focused,
+    })
 }
 
 fn focus_window_for_foreground(foreground: HWND, gui: &GUITHREADINFO) -> Option<HWND> {
@@ -266,5 +319,65 @@ mod tests {
 
         assert_eq!(focus_window_for_foreground(foreground, &stale), None);
         assert_eq!(focus_window_for_foreground(foreground, &missing), None);
+    }
+
+    #[test]
+    fn closed_ime_on_foreground_fallback_is_known_no() {
+        let foreground = test_hwnd(1);
+        let focused = test_hwnd(2);
+        let foreground_ime = test_hwnd(3);
+        let input_windows = ForegroundInputWindows {
+            foreground,
+            focused: Some(focused),
+        };
+
+        let guess = query_active_guess(
+            &input_windows,
+            |window| (window == foreground).then_some(foreground_ime),
+            |window| (window == foreground_ime).then_some(false),
+        );
+
+        assert_eq!(guess, ImeGuess::No);
+    }
+
+    #[test]
+    fn failed_focused_ime_query_falls_back_to_foreground() {
+        let foreground = test_hwnd(1);
+        let focused = test_hwnd(2);
+        let focused_ime = test_hwnd(3);
+        let foreground_ime = test_hwnd(4);
+        let input_windows = ForegroundInputWindows {
+            foreground,
+            focused: Some(focused),
+        };
+
+        let guess = query_active_guess(
+            &input_windows,
+            |window| {
+                if window == focused {
+                    Some(focused_ime)
+                } else if window == foreground {
+                    Some(foreground_ime)
+                } else {
+                    None
+                }
+            },
+            |window| (window == foreground_ime).then_some(true),
+        );
+
+        assert_eq!(guess, ImeGuess::Yes);
+    }
+
+    #[test]
+    fn unavailable_ime_state_remains_unknown() {
+        let input_windows = ForegroundInputWindows {
+            foreground: test_hwnd(1),
+            focused: Some(test_hwnd(2)),
+        };
+
+        assert_eq!(
+            query_active_guess(&input_windows, |_| None, |_| Some(false)),
+            ImeGuess::Unknown
+        );
     }
 }

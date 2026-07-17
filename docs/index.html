@@ -482,7 +482,13 @@
       }
 
       .safety-band .section-heading {
+        margin-bottom: 18px;
+      }
+
+      .safety-intro {
         margin-bottom: 0;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 16px;
       }
 
       .decision-list {
@@ -525,6 +531,43 @@
         font-family: var(--mono);
         font-size: 12px;
         font-weight: 800;
+      }
+
+      .safety-points {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 42px;
+        padding-top: 36px;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .safety-point {
+        padding: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .safety-point-label {
+        display: block;
+        margin-bottom: 18px;
+        color: var(--mint);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      .safety-point h3 {
+        margin-bottom: 10px;
+        font-size: 20px;
+      }
+
+      .safety-point p {
+        margin-bottom: 0;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 14px;
       }
 
       .environment-grid {
@@ -794,6 +837,78 @@
         font-weight: 900;
       }
 
+      .feedback-section {
+        border-top: 1px solid var(--line);
+      }
+
+      .feedback-layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+        align-items: start;
+        gap: clamp(42px, 7vw, 88px);
+      }
+
+      .feedback-copy .section-heading {
+        margin-bottom: 18px;
+      }
+
+      .feedback-copy .section-lead {
+        margin-bottom: 0;
+      }
+
+      .feedback-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .feedback-card {
+        display: flex;
+        min-height: 300px;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 28px;
+        border: 2px solid var(--ink);
+        border-radius: var(--radius);
+        background: var(--card);
+        box-shadow: 7px 7px 0 var(--ink);
+      }
+
+      .feedback-card-tag {
+        display: inline-flex;
+        margin-bottom: 30px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        color: var(--ink);
+        background: var(--yellow);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .feedback-card:nth-child(2) .feedback-card-tag {
+        background: var(--orange);
+      }
+
+      .feedback-card h3 {
+        margin-bottom: 10px;
+        font-size: 24px;
+      }
+
+      .feedback-card p {
+        flex: 1;
+        margin-bottom: 24px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .feedback-note {
+        grid-column: 1 / -1;
+        margin: 8px 0 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+      }
+
       .closing {
         text-align: center;
       }
@@ -865,7 +980,9 @@
         }
 
         .feature-grid,
-        .environment-grid {
+        .environment-grid,
+        .safety-points,
+        .feedback-grid {
           grid-template-columns: 1fr;
         }
 
@@ -880,6 +997,14 @@
         .safety-layout {
           grid-template-columns: 1fr;
           gap: 42px;
+        }
+
+        .feedback-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .feedback-card {
+          min-height: 0;
         }
       }
 
@@ -983,6 +1108,7 @@
           <a href="#why">魅力</a>
           <a href="#environment">実行環境</a>
           <a href="#install">インストール</a>
+          <a href="#feedback">フィードバック</a>
           <a
             class="nav-github"
             href="https://github.com/SakuraNeneCpp/CL4SE"
@@ -1081,30 +1207,52 @@
       </section>
 
       <section class="safety-band" aria-labelledby="safety-heading">
-        <div class="shell safety-layout">
-          <div>
-            <p class="section-kicker">Fail-safe by design</p>
-            <h2 id="safety-heading" class="section-heading">
-              フェイルセーフ設計
-            </h2>
+        <div class="shell">
+          <div class="safety-layout">
+            <div>
+              <p class="section-kicker">Fail-safe by design</p>
+              <h2 id="safety-heading" class="section-heading">
+                フェイルセーフ設計
+              </h2>
+              <p class="safety-intro">
+                CL4SEはキーボード入力を扱うからこそ、動作範囲を限定し、不確実な状況では何もしない設計を最優先しています。
+              </p>
+            </div>
+            <ul class="decision-list">
+              <li>
+                <span class="decision-signal" aria-hidden="true"></span>
+                <span><strong>IMEオン + 変換中</strong><br><span class="decision-label">確定できると判断</span></span>
+                <span class="decision-action">COMMIT</span>
+              </li>
+              <li>
+                <span class="decision-signal" aria-hidden="true"></span>
+                <span><strong>IME判定済み + 非変換中</strong><br><span class="decision-label">設定有効時だけ安全改行</span></span>
+                <span class="decision-action">SHIFT+ENTER</span>
+              </li>
+              <li>
+                <span class="decision-signal" aria-hidden="true"></span>
+                <span><strong>IME状態不明</strong><br><span class="decision-label">設定にかかわらず誤注入を避ける</span></span>
+                <span class="decision-action">DO NOTHING</span>
+              </li>
+            </ul>
           </div>
-          <ul class="decision-list">
-            <li>
-              <span class="decision-signal" aria-hidden="true"></span>
-              <span><strong>IMEオン + 変換中</strong><br><span class="decision-label">確定できると判断</span></span>
-              <span class="decision-action">COMMIT</span>
-            </li>
-            <li>
-              <span class="decision-signal" aria-hidden="true"></span>
-              <span><strong>IME判定済み + 非変換中</strong><br><span class="decision-label">設定有効時だけ安全改行</span></span>
-              <span class="decision-action">SHIFT+ENTER</span>
-            </li>
-            <li>
-              <span class="decision-signal" aria-hidden="true"></span>
-              <span><strong>IME状態不明</strong><br><span class="decision-label">設定にかかわらず誤注入を避ける</span></span>
-              <span class="decision-action">DO NOTHING</span>
-            </li>
-          </ul>
+          <div class="safety-points">
+            <article class="safety-point">
+              <span class="safety-point-label">01 / PRIVACY</span>
+              <h3>入力内容を収集しない</h3>
+              <p>入力した文字列は保存・外部送信せず、ログにも残しません。判定に使うのは制御キーの種別やIME状態など、動作に必要な情報だけです。</p>
+            </article>
+            <article class="safety-point">
+              <span class="safety-point-label">02 / LIMITED SCOPE</span>
+              <h3>操作するキーを限定</h3>
+              <p>抑止するのは物理Caps Lockだけ。注入するキーも、変換確定、安全改行、本来のCaps Lockパススルーに必要なものだけに限定します。</p>
+            </article>
+            <article class="safety-point">
+              <span class="safety-point-label">03 / CLEANUP</span>
+              <h3>停止時に元へ戻す</h3>
+              <p>通常停止や終了シグナルでフック、リマップ、仮想入力デバイスをクリーンアップします。macOSではdoctorから残留リマップを復元できます。</p>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -1440,6 +1588,45 @@
         </div>
       </section>
 
+      <section id="feedback" class="feedback-section" aria-labelledby="feedback-heading">
+        <div class="shell feedback-layout">
+          <div class="feedback-copy">
+            <p class="section-kicker">Feedback</p>
+            <h2 id="feedback-heading" class="section-heading">フィードバック受付中</h2>
+            <p class="section-lead">
+              対応環境を広げ、問題を安全に直すため、GitHub Issue Formsで動作報告と不具合報告を受け付けています。
+            </p>
+          </div>
+          <div class="feedback-grid">
+            <article class="feedback-card">
+              <span class="feedback-card-tag">COMPATIBILITY</span>
+              <h3>動作環境を報告</h3>
+              <p>正常に使えたOS・IME・アプリの組み合わせを共有してください。対応状況の把握と案内改善に役立てます。</p>
+              <a
+                class="button button-primary"
+                href="https://github.com/SakuraNeneCpp/CL4SE/issues/new?template=compatibility_report.yml"
+                target="_blank"
+                rel="noopener noreferrer"
+              >動作報告フォームを開く ↗</a>
+            </article>
+            <article class="feedback-card">
+              <span class="feedback-card-tag">BUG REPORT</span>
+              <h3>不具合を報告</h3>
+              <p>起動失敗や意図しないキー動作などを報告してください。環境と再現手順をフォームに沿って確認します。</p>
+              <a
+                class="button button-secondary"
+                href="https://github.com/SakuraNeneCpp/CL4SE/issues/new?template=bug_report.yml"
+                target="_blank"
+                rel="noopener noreferrer"
+              >不具合報告フォームを開く ↗</a>
+            </article>
+            <p class="feedback-note">
+              投稿にはGitHubアカウントが必要で、内容は公開されます。入力した文章、個人情報、機密情報は記載しないでください。
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- <section class="closing">
         <div class="shell">
           <p class="section-kicker">Ready when you are</p>
@@ -1466,6 +1653,8 @@
         <div class="footer-links">
           <a href="https://github.com/SakuraNeneCpp/CL4SE">GitHub</a>
           <a href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.0">Release v1.0.0</a>
+          <a href="#feedback">フィードバック</a>
+          <a href="https://github.com/SakuraNeneCpp/CL4SE/blob/main/LICENSE">MIT License</a>
           <a href="#top">ページ上部へ ↑</a>
         </div>
       </div>

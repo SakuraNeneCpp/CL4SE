@@ -1,0 +1,85 @@
+name: 動作環境を報告
+description: CL4SEが動作したOS・IME・アプリの組み合わせを共有します
+title: "[Compatibility]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        動作報告ありがとうございます。入力した文章や個人情報は記載せず、環境情報だけを共有してください。
+
+  - type: input
+    id: cl4se_version
+    attributes:
+      label: CL4SEのバージョン
+      placeholder: "例: 1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: OS
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: OSのバージョン
+      placeholder: "例: Windows 11 24H2 / macOS 15.5 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: ime
+    attributes:
+      label: IME
+      placeholder: "例: Microsoft IME / Google日本語入力 / fcitx5-mozc"
+    validations:
+      required: true
+
+  - type: input
+    id: application
+    attributes:
+      label: 確認したアプリ
+      placeholder: "例: Slackデスクトップ版 / Discord / VS Code"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: 動作結果
+      options:
+        - 問題なく動作した
+        - 一部の機能だけ動作した
+        - 動作しなかった
+    validations:
+      required: true
+
+  - type: textarea
+    id: checked_behavior
+    attributes:
+      label: 確認した操作
+      description: Caps Lockでの変換確定、確定直後の無反応、Shift+Caps Lockなど、確認した範囲を記載してください。
+      placeholder: "例: 変換中のCaps Lockで確定し、直後のCaps Lockでは何も起きませんでした。"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 補足
+      description: 特別な設定や気づいた点があれば記載してください。
+
+  - type: checkboxes
+    id: privacy_confirmation
+    attributes:
+      label: 公開情報の確認
+      options:
+        - label: 入力した文章、個人情報、機密情報をこの報告に含めていません。
+          required: true

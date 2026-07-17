@@ -1,0 +1,94 @@
+name: 不具合を報告
+description: CL4SEの誤動作、起動失敗、環境依存の問題を報告します
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。安全確認のため、入力した文章や個人情報は記載しないでください。キー入力の内容が含まれるログも添付しないでください。
+
+  - type: input
+    id: cl4se_version
+    attributes:
+      label: CL4SEのバージョン
+      placeholder: "例: 1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: OS
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: OSのバージョン
+      placeholder: "例: Windows 11 24H2 / macOS 15.5 / Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: input
+    id: ime
+    attributes:
+      label: IME
+      placeholder: "例: Microsoft IME / Google日本語入力 / fcitx5-mozc"
+    validations:
+      required: true
+
+  - type: input
+    id: application
+    attributes:
+      label: 問題が起きたアプリ
+      placeholder: "例: Slackデスクトップ版 / Discord / VS Code"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: 実際に起きたこと
+      description: 入力内容そのものは書かず、CL4SEとキーの動作だけを記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: 再現手順
+      placeholder: |
+        1. CL4SEを起動する
+        2. IMEをオンにする
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: 期待した動作
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor_output
+    attributes:
+      label: cl4se doctorの結果
+      description: 個人情報や環境固有のパスが含まれていないことを確認して貼り付けてください。
+      render: shell
+
+  - type: checkboxes
+    id: safety_confirmation
+    attributes:
+      label: 安全確認
+      options:
+        - label: 入力した文章、個人情報、機密情報をこの報告に含めていません。
+          required: true
+        - label: 利用可能な最新リリースでも同じ問題が起きることを確認しました。
+          required: true
