@@ -201,6 +201,19 @@
         margin-top: 0;
       }
 
+      h1,
+      h2,
+      h3 {
+        line-break: strict;
+        text-wrap: balance;
+        word-break: keep-all;
+      }
+
+      .heading-unit {
+        display: inline-block;
+        white-space: nowrap;
+      }
+
       h1 {
         max-width: 760px;
         margin-bottom: 26px;
@@ -850,6 +863,7 @@
 
       .feedback-copy .section-heading {
         margin-bottom: 18px;
+        font-size: clamp(36px, 4vw, 52px);
       }
 
       .feedback-copy .section-lead {
@@ -1124,7 +1138,7 @@
         <div>
           <p class="eyebrow">v1.0.0 · Windows / macOS / Linux</p>
           <h1>
-            <span class="headline-accent">Caps Lockで  変換確定 / 改行</span>
+            <span class="headline-accent"><span class="heading-unit">Caps Lockで</span> <span class="heading-unit">・変換確定</span> <span class="heading-unit">・改行</span></span>
           </h1>
           <p class="hero-copy">
             CL4SE (Caps Lock for Safe Enter) は、Caps Lockキーの挙動を日本語IMEの変換確定で上書きする常駐ツールです。
@@ -1173,7 +1187,7 @@
       <section id="why">
         <div class="shell">
           <p class="section-kicker">Why CL4SE</p>
-          <h2 class="section-heading">誤送信を防ぎます</h2>
+          <h2 class="section-heading"><span class="heading-unit">誤送信を</span><wbr><span class="heading-unit">防ぎます</span></h2>
           <p class="section-lead">
             特に英語圏で開発されたアプリでは、しばしばメッセージの送信にEnterが割り当てられます。
             しかし日本語ではIMEの変換確定にもEnterが割り当てられ、これが誤送信の原因になります。
@@ -1183,21 +1197,21 @@
           <div class="feature-grid">
             <article class="feature-card">
               <span class="feature-number">01</span>
-              <h3>簡単無料インストール</h3>
+              <h3><span class="heading-unit">簡単無料</span><wbr><span class="heading-unit">インストール</span></h3>
               <p>
                 インストーラをダウンロードするか, このページの下の方にあるコマンドをコピペするだけで導入できます。アンインストールのコマンドもあるので、不満があれば簡単にアンインストールできます。
               </p>
             </article>
             <article class="feature-card">
               <span class="feature-number">02</span>
-              <h3>安心安全設計</h3>
+              <h3><span class="heading-unit">安心安全</span><wbr><span class="heading-unit">設計</span></h3>
               <p>
                 IMEがオンで、変換中だと判断できる場合だけ確定キーを注入し、不明な状態では何もしないフェイルセーフ設計です。任意設定のShift+Enterも、IME状態が判定済みで非変換中の場合だけ動作します。また、オープンソースなので不審なバイナリでないことが検証できます。
               </p>
             </article>
             <article class="feature-card">
               <span class="feature-number">03</span>
-              <h3>3つのOSで同じ使い心地</h3>
+              <h3><span class="heading-unit">3つのOSで</span><wbr><span class="heading-unit">同じ使い心地</span></h3>
               <p>
                 Windows・macOS・Linuxに対応。共通の判定ロジックで、環境が変わっても操作はCaps Lockひとつです。安心してタイピングのマッスルメモリーに組み込めます。
               </p>
@@ -1212,7 +1226,7 @@
             <div>
               <p class="section-kicker">Fail-safe by design</p>
               <h2 id="safety-heading" class="section-heading">
-                フェイルセーフ設計
+                <span class="heading-unit">フェイルセーフ</span><wbr><span class="heading-unit">設計</span>
               </h2>
               <p class="safety-intro">
                 CL4SEはキーボード入力を扱うからこそ、動作範囲を限定し、不確実な状況では何もしない設計を最優先しています。
@@ -1239,17 +1253,17 @@
           <div class="safety-points">
             <article class="safety-point">
               <span class="safety-point-label">01 / PRIVACY</span>
-              <h3>入力内容を収集しない</h3>
+              <h3><span class="heading-unit">入力内容を</span><wbr><span class="heading-unit">収集しない</span></h3>
               <p>入力した文字列は保存・外部送信せず、ログにも残しません。判定に使うのは制御キーの種別やIME状態など、動作に必要な情報だけです。</p>
             </article>
             <article class="safety-point">
               <span class="safety-point-label">02 / LIMITED SCOPE</span>
-              <h3>操作するキーを限定</h3>
+              <h3><span class="heading-unit">操作するキーを</span><wbr><span class="heading-unit">限定</span></h3>
               <p>抑止するのは物理Caps Lockだけ。注入するキーも、変換確定、安全改行、本来のCaps Lockパススルーに必要なものだけに限定します。</p>
             </article>
             <article class="safety-point">
               <span class="safety-point-label">03 / CLEANUP</span>
-              <h3>停止時に元へ戻す</h3>
+              <h3><span class="heading-unit">停止時に</span><wbr><span class="heading-unit">元へ戻す</span></h3>
               <p>通常停止や終了シグナルでフック、リマップ、仮想入力デバイスをクリーンアップします。macOSではdoctorから残留リマップを復元できます。</p>
             </article>
           </div>
@@ -1592,7 +1606,7 @@
         <div class="shell feedback-layout">
           <div class="feedback-copy">
             <p class="section-kicker">Feedback</p>
-            <h2 id="feedback-heading" class="section-heading">フィードバック受付中</h2>
+            <h2 id="feedback-heading" class="section-heading"><span class="heading-unit">フィードバック</span><wbr><span class="heading-unit">受付中</span></h2>
             <p class="section-lead">
               対応環境を広げ、問題を安全に直すため、GitHub Issue Formsで動作報告と不具合報告を受け付けています。
             </p>
@@ -1600,7 +1614,7 @@
           <div class="feedback-grid">
             <article class="feedback-card">
               <span class="feedback-card-tag">COMPATIBILITY</span>
-              <h3>動作環境を報告</h3>
+              <h3><span class="heading-unit">動作環境を</span><wbr><span class="heading-unit">報告</span></h3>
               <p>正常に使えたOS・IME・アプリの組み合わせを共有してください。対応状況の把握と案内改善に役立てます。</p>
               <a
                 class="button button-primary"
@@ -1611,7 +1625,7 @@
             </article>
             <article class="feedback-card">
               <span class="feedback-card-tag">BUG REPORT</span>
-              <h3>不具合を報告</h3>
+              <h3><span class="heading-unit">不具合を</span><wbr><span class="heading-unit">報告</span></h3>
               <p>起動失敗や意図しないキー動作などを報告してください。環境と再現手順をフォームに沿って確認します。</p>
               <a
                 class="button button-secondary"
