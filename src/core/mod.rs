@@ -140,6 +140,12 @@ impl Engine {
 
                 let snapshot = ime_state.snapshot();
                 self.tracker.refresh(snapshot.active, now);
+                log::debug!(
+                    "trigger IME snapshot: active={:?}, ime_id={:?}, composing={}",
+                    snapshot.active,
+                    snapshot.ime_id,
+                    self.tracker.is_composing()
+                );
                 let decision = if snapshot.active == ImeGuess::Yes && self.tracker.is_composing() {
                     Decision::InjectCommitKey(resolve_commit_key(
                         self.commit_key,
