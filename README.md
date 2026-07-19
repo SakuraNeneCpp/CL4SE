@@ -26,7 +26,7 @@ macOS / Linux では配置後に実行権限を付ける。
 chmod 755 /path/to/cl4se
 ```
 
-自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v1.0.5 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
+自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v1.0.6 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
 
 ### 2. 権限を設定し診断する
 
@@ -315,14 +315,14 @@ pub trait Autostart {
 | キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。リピート状態もCapsLock専用のscanCode状態で追跡し、vkCodeに依存しない。戻り値1で抑止 |
 | マウス観測 | `WH_MOUSE_LL`(クリックのみ、Composingリセット用) |
 | フォーカス観測 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` |
-| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓（取得不能時は前面窓）に対応する既定IMEウィンドウを `ImmGetDefaultIMEWnd` で取得。`WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` と `IMC_GETCONVERSIONMODE (0x0001)` を `SendMessageTimeoutW` で照会する。closed、またはopenでも `IME_CMODE_NATIVE` がない英数字モード（タスクバー表示「A」）は `No`。openかつnativeで変換禁止でない場合は `Yes`。IMEウィンドウ取得不能、タイムアウト、open中の変換モード取得不能、解決中の前面窓変更は `Unknown` |
+| `ime_active` | 認識済みMS-IME / Google日本語入力では、Windowsのタスクバー Input Indicator (`Shell_TrayWnd`) がUI Automationへ公開する一意な現在モードを優先する。`A` / 半角英数 / Direct Inputは `No`、`あ` / ひらがな / カタカナ / 全角英数は `Yes`。候補の複数一致・プロパティ間の矛盾は `Unknown`。タスクバー状態が取得不能なら、`GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` でフォーカス窓を解決し、フォーカス窓と前面窓の既定IMEウィンドウへ `IMC_GETOPENSTATUS` / `IMC_GETCONVERSIONMODE` をタイムアウト付きで照会する。両窓の結果が矛盾する場合も `Unknown` |
 | `ime_id` | TSF `ITfInputProcessorProfileMgr::GetActiveProfile` でアクティブ入力プロファイルを取得し、MS-IME / Google 日本語入力の CLSID と照合(**要検証**: 呼び出し方法と各CLSID値)。取得不能は `None`(→ Enter に解決) |
 | キー注入 | `SendInput`(確定用VK_RETURN / VK_CONTROL + `M`、任意設定の安全改行用VK_SHIFT + VK_RETURNの一連)。`dwExtraInfo` に自前マーカー。フック側は `LLKHF_INJECTED` + マーカーで自イベントを無視 |
 | 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" start`。`start` がウィンドウなしの `run` プロセスを生成して終了 |
 | 権限 | 管理者権限不要。UACセキュアデスクトップではフックが効かないが実害なし |
 | 注意 | フックコールバック内は最小処理(重い処理はチャネルでワーカーへ)。フックはメッセージループ必須 |
 
-既知の制約: UWP系アプリ等でフォーカス窓に対応する既定IMEウィンドウからopen状態を取得できない場合は `Unknown` → そのアプリではCaps Lockが無反応になる(安全側)。
+既知の制約: タスクバーのUI Automation状態を公開しないIMEや、Input Indicatorを表示しない環境ではIMM照会へフォールバックする。タスクバーとIMMのどちらからも一意な状態を取得できない場合は `Unknown` → そのアプリではCaps Lockが無反応になる(安全側)。
 
 ### 3.2 macOS
 
@@ -444,7 +444,7 @@ cargo check --target x86_64-unknown-linux-gnu
 | T7 | `cl4se install-autostart` → 再ログイン | ウィンドウなしでバックグラウンド自動起動している。`uninstall-autostart` で解除される |
 | T8 | プロセスをkill → キーボードが完全に正常に戻る | 残留リマップ・フックなし(macOSは `doctor` で復元確認) |
 | T9 | `RUST_LOG=debug` で変換中に Caps Lock(MS-IME / Google日本語入力 / mozc 環境と、許可リスト外のIME環境) | ログ上の解決キーが §1.3 の許可リスト通り(前者は Ctrl+M、後者と macOS は Enter)。いずれも確定に成功する |
-| T10 | `cl4se start` で起動し、実行中に `cl4se setting idle-action shift-enter` を実行。(a)IMEオン・非変換中、(b)IMEオフ、(c)IME状態を取得できないアプリでCaps Lock。終了後は `cl4se setting idle-action none` → `cl4se stop` → `cl4se start` | 同じPID・バックグラウンドプロセスのままフック・リマップ・uinputを安全に再初期化する。(a)(b)はShift+Enterとして改行され、送信されない。(c)は何も起きない。`stop` はクリーンアップ完了後に戻り、以後のキー入力でログが増えない。再度 `start` するとバックグラウンドで動作を再開する |
+| T10 | `cl4se start` で起動し、実行中に `cl4se setting idle-action shift-enter` を実行。(a)IMEオン・非変換中、(b)Windowsではタスクバー表示を「A」にしてメモ帳とターミナルで `abc` を入力後、直後と数秒後（他OSはIMEオフ時）にCaps Lock、(c)IME状態を取得できないアプリでCaps Lock。終了後は `cl4se setting idle-action none` → `cl4se stop` → `cl4se start` | 同じPID・バックグラウンドプロセスのままフック・リマップ・uinputを安全に再初期化する。(a)(b)は毎回Shift+Enterとして改行され、送信されない。(c)は何も起きない。`stop` はクリーンアップ完了後に戻り、以後のキー入力でログが増えない。再度 `start` するとバックグラウンドで動作を再開する |
 | T11 | 最新版で `cl4se update`。次回リリース後は、稼働中の旧版からもう一度実行 | 最新版では「already up to date」と表示してファイルを変更しない。旧版ではSHA-256検証後に同じパスへ更新し、更新前に稼働中ならバックグラウンド実行を再開する。`cl4se --version` が最新になり、失敗時は旧版が残る |
 
 対象IME: MS-IME / Google日本語入力(Windows)、日本語IM・Google日本語入力(macOS)、fcitx5-mozc / ibus-mozc(Linux)。

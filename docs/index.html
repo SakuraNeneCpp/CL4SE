@@ -1136,7 +1136,7 @@
     <main id="main">
       <div id="top" class="shell hero">
         <div>
-          <p class="eyebrow">v1.0.5 · Windows / macOS / Linux</p>
+          <p class="eyebrow">v1.0.6 · Windows / macOS / Linux</p>
           <h1>
             <span class="headline-accent"><span class="heading-unit">Caps Lockで</span> <span class="heading-unit">・変換確定</span> <span class="heading-unit">・改行</span></span>
           </h1>
@@ -1148,10 +1148,10 @@
             <a class="button button-primary" href="#install">コマンドからインストール</a>
             <a
               class="button button-secondary os-download"
-              href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.5"
+              href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.6"
               target="_blank"
               rel="noopener noreferrer"
-            >v1.0.5をダウンロード ↗</a>
+            >v1.0.6をダウンロード ↗</a>
           </div>
           <p id="download-note" class="download-note"></p>
           <div class="micro-proof" aria-label="製品の特徴">
@@ -1374,7 +1374,7 @@
                     <span class="command-title">導入 : インストール + スタートアップ登録 + 起動</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-win-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; $n="$e.new"; New-Item -ItemType Directory -Force $d | Out-Null; Invoke-WebRequest "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.5/cl4se-windows-x86_64.exe" -OutFile $n; if (Test-Path -LiteralPath $e) { &amp; $e stop; if ($LASTEXITCODE -ne 0) { throw "CL4SE stop failed" } }; Move-Item -LiteralPath $n -Destination $e -Force; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CL4SE doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CL4SE autostart setup failed" }; &amp; $e start; if ($LASTEXITCODE -ne 0) { throw "CL4SE background start failed" }</code></pre>
+                  <pre><code id="cmd-win-install">$ErrorActionPreference="Stop"; $d="$env:LOCALAPPDATA\Programs\CL4SE"; $e="$d\cl4se.exe"; $n="$e.new"; New-Item -ItemType Directory -Force $d | Out-Null; Invoke-WebRequest "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.6/cl4se-windows-x86_64.exe" -OutFile $n; if (Test-Path -LiteralPath $e) { &amp; $e stop; if ($LASTEXITCODE -ne 0) { throw "CL4SE stop failed" } }; Move-Item -LiteralPath $n -Destination $e -Force; &amp; $e doctor; if ($LASTEXITCODE -ne 0) { throw "CL4SE doctor failed" }; &amp; $e install-autostart; if ($LASTEXITCODE -ne 0) { throw "CL4SE autostart setup failed" }; &amp; $e start; if ($LASTEXITCODE -ne 0) { throw "CL4SE background start failed" }</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
@@ -1459,7 +1459,7 @@
                     <span class="command-title">導入</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-mac-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CL4SE"; e="$d/cl4se"; n="$e.new"; mkdir -p "$d" &amp;&amp; curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.5/cl4se-macos-universal" -o "$n" &amp;&amp; chmod 755 "$n" &amp;&amp; { [ ! -x "$e" ] || "$e" stop; } &amp;&amp; mv -f "$n" "$e" &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" start || true; sleep 3; "$e" stop || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart &amp;&amp; "$e" start</code></pre>
+                  <pre><code id="cmd-mac-install">d="$HOME/Applications/CL4SE"; e="$d/cl4se"; n="$e.new"; mkdir -p "$d" &amp;&amp; curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.6/cl4se-macos-universal" -o "$n" &amp;&amp; chmod 755 "$n" &amp;&amp; { [ ! -x "$e" ] || "$e" stop; } &amp;&amp; mv -f "$n" "$e" &amp;&amp; { "$e" doctor &gt;/dev/null 2&gt;&amp;1 || { "$e" start || true; sleep 3; "$e" stop || true; open "x-apple.systempreferences:com.apple.preference.security?Privacy"; }; } &amp;&amp; "$e" install-autostart &amp;&amp; "$e" start</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
@@ -1544,7 +1544,7 @@
                     <span class="command-title">導入</span>
                     <button class="copy-button" type="button" data-copy-target="cmd-linux-install">コピー</button>
                   </div>
-                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/cl4se"; n="$e.new"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.5/cl4se-linux-x86_64" -o "$n" &amp;&amp; chmod 755 "$n" &amp;&amp; { [ ! -x "$e" ] || "$e" stop; } &amp;&amp; mv -f "$n" "$e" &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop cl4se.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x cl4se &gt;/dev/null || sg input -c "'$e' start"; }; else "$e" uninstall-autostart; false; fi</code></pre>
+                  <pre><code id="cmd-linux-install">d="$HOME/.local/bin"; e="$d/cl4se"; n="$e.new"; s="$HOME/.local/share/cl4se"; r="/etc/udev/rules.d/99-cl4se-uinput.rules"; mkdir -p "$d" "$s" &amp;&amp; curl -fL "https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.6/cl4se-linux-x86_64" -o "$n" &amp;&amp; chmod 755 "$n" &amp;&amp; { [ ! -x "$e" ] || "$e" stop; } &amp;&amp; mv -f "$n" "$e" &amp;&amp; { getent group input &gt;/dev/null || sudo groupadd input; } &amp;&amp; { id -nG "$USER" | tr ' ' '\n' | grep -qx input || { sudo usermod -aG input "$USER" &amp;&amp; : &gt;"$s/managed-input-group"; }; } &amp;&amp; { [ -e /dev/uinput ] || sudo modprobe uinput; } &amp;&amp; { [ -f "$r" ] || { printf '%s\n' 'KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"' | sudo tee "$r" &gt;/dev/null &amp;&amp; : &gt;"$s/managed-uinput-rule"; }; } &amp;&amp; sudo udevadm control --reload-rules &amp;&amp; sudo udevadm trigger --name-match=uinput &amp;&amp; "$e" install-autostart &amp;&amp; { systemctl --user stop cl4se.service &gt;/dev/null 2&gt;&amp;1 || true; } &amp;&amp; if sg input -c "'$e' doctor"; then { pgrep -x cl4se &gt;/dev/null || sg input -c "'$e' start"; }; else "$e" uninstall-autostart; false; fi</code></pre>
                 </article>
                 <article class="command-card">
                   <div class="command-head">
@@ -1609,9 +1609,9 @@
             </div>
 
             <div class="release-strip">
-              <p>導入コマンドはv1.0.5固定です。導入後は各OS欄のupdateコマンドで最新版へ更新できます。</p>
+              <p>導入コマンドはv1.0.6固定です。導入後は各OS欄のupdateコマンドで最新版へ更新できます。</p>
               <a
-                href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.5"
+                href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.6"
                 target="_blank"
                 rel="noopener noreferrer"
               >ReleaseとSHA256SUMSを見る ↗</a>
@@ -1673,7 +1673,7 @@
             <a class="button button-primary" href="#install">インストールする ↑</a>
             <a
               class="button button-secondary"
-              href="https://github.com/SakuraNeneCpp/CL4SE/blob/v1.0.5/README.md"
+              href="https://github.com/SakuraNeneCpp/CL4SE/blob/v1.0.6/README.md"
               target="_blank"
               rel="noopener noreferrer"
             >詳しい仕様を読む ↗</a>
@@ -1687,7 +1687,7 @@
         <span>© <span id="year"></span> CL4SE</span>
         <div class="footer-links">
           <a href="https://github.com/SakuraNeneCpp/CL4SE">GitHub</a>
-          <a href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.5">Release v1.0.5</a>
+          <a href="https://github.com/SakuraNeneCpp/CL4SE/releases/tag/v1.0.6">Release v1.0.6</a>
           <a href="#feedback">フィードバック</a>
           <a href="https://github.com/SakuraNeneCpp/CL4SE/blob/main/LICENSE">MIT License</a>
           <a href="#top">ページ上部へ ↑</a>
@@ -1780,12 +1780,12 @@
           },
           macos: {
             label: 'macOS版をダウンロード ↗',
-            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.5/cl4se-macos-universal',
+            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.6/cl4se-macos-universal',
             note: 'かんたん導入は下のmacOS欄にある一行コマンドを使ってください。'
           },
           linux: {
             label: 'Linux版をダウンロード ↗',
-            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.5/cl4se-linux-x86_64',
+            href: 'https://github.com/SakuraNeneCpp/CL4SE/releases/download/v1.0.6/cl4se-linux-x86_64',
             note: 'かんたん導入は下のLinux欄にある一行コマンドを使ってください。'
           }
         };

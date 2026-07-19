@@ -2,6 +2,7 @@ mod autostart;
 mod hooks;
 mod ime;
 mod injector;
+mod taskbar;
 
 use std::{
     any::Any,
@@ -165,6 +166,7 @@ pub(super) fn doctor() -> Result<()> {
             }
 
             let mut provider = WindowsImeStateProvider::new();
+            println!("Taskbar IME mode: {:?}", provider.taskbar_mode_for_doctor());
             let snapshot = provider.snapshot();
             let profile = snapshot.ime_id.as_deref().unwrap_or("none");
             println!(

@@ -28,6 +28,8 @@ use crate::{
     platform::ImeStateProvider,
 };
 
+use super::taskbar::{TaskbarModeProbe, TaskbarModeProvider};
+
 const IMC_GETCONVERSIONMODE: usize = 0x0001;
 const IMC_GETOPENSTATUS: usize = 0x0005;
 const IME_QUERY_TIMEOUT_MS: u32 = 100;
@@ -67,6 +69,7 @@ impl Drop for ComApartment {
 
 pub(crate) struct WindowsImeStateProvider {
     profile_manager: Option<ITfInputProcessorProfileMgr>,
+    taskbar_mode: TaskbarModeProvider,
 }
 
 impl WindowsImeStateProvider {
@@ -87,14 +90,21 @@ impl WindowsImeStateProvider {
         })
         .ok();
 
-        Self { profile_manager }
+        Self {
+            profile_manager,
+            taskbar_mode: TaskbarModeProvider::new(),
+        }
     }
 
     pub(crate) fn has_foreground_ime_window() -> bool {
         foreground_ime_window().is_some()
     }
 
-    fn active_guess() -> ImeGuess {
+    pub(crate) fn taskbar_mode_for_doctor(&mut self) -> TaskbarModeProbe {
+        self.taskbar_mode.probe()
+    }
+
+    fn imm_active_guess() -> ImeGuess {
         let Some(input_windows) = foreground_input_windows() else {
             return ImeGuess::Unknown;
         };
@@ -125,6 +135,26 @@ impl WindowsImeStateProvider {
         unsafe { manager.GetActiveProfile(&GUID_TFCAT_TIP_KEYBOARD, &mut profile) }.ok()?;
 
         recognized_ime_id(&profile).map(str::to_owned)
+    }
+
+    fn active_guess(&mut self, recognized_profile: bool) -> ImeGuess {
+        let taskbar = if recognized_profile {
+            self.taskbar_mode.probe()
+        } else {
+            TaskbarModeProbe::Unavailable
+        };
+        let imm = matches!(taskbar, TaskbarModeProbe::Unavailable).then(Self::imm_active_guess);
+        let guess = resolve_active_guess(taskbar, imm);
+        log::debug!("Windows IME source: taskbar={taskbar:?}, active={guess:?}");
+        guess
+    }
+}
+
+fn resolve_active_guess(taskbar: TaskbarModeProbe, imm: Option<ImeGuess>) -> ImeGuess {
+    match taskbar {
+        TaskbarModeProbe::Known(guess) => guess,
+        TaskbarModeProbe::Ambiguous => ImeGuess::Unknown,
+        TaskbarModeProbe::Unavailable => imm.unwrap_or(ImeGuess::Unknown),
     }
 }
 
@@ -186,17 +216,26 @@ fn query_active_guess(
     mut ime_window_for: impl FnMut(HWND) -> Option<HWND>,
     mut guess_for: impl FnMut(HWND) -> Option<ImeGuess>,
 ) -> ImeGuess {
+    let mut observed = None;
+    let mut previous_ime_window = None;
     for input_window in input_windows.candidates().into_iter().flatten() {
         let Some(ime_window) = ime_window_for(input_window) else {
             continue;
         };
+        if previous_ime_window == Some(ime_window) {
+            continue;
+        }
+        previous_ime_window = Some(ime_window);
         let Some(guess) = guess_for(ime_window) else {
             continue;
         };
-        return guess;
+        if observed.is_some_and(|current| current != guess) {
+            return ImeGuess::Unknown;
+        }
+        observed = Some(guess);
     }
 
-    ImeGuess::Unknown
+    observed.unwrap_or(ImeGuess::Unknown)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -242,9 +281,10 @@ fn recognized_ime_id(profile: &TF_INPUTPROCESSORPROFILE) -> Option<&'static str>
 
 impl ImeStateProvider for WindowsImeStateProvider {
     fn snapshot(&mut self) -> ImeSnapshot {
+        let ime_id = self.active_ime_id();
         ImeSnapshot {
-            active: Self::active_guess(),
-            ime_id: self.active_ime_id(),
+            active: self.active_guess(ime_id.is_some()),
+            ime_id,
         }
     }
 }
@@ -331,6 +371,34 @@ mod tests {
     }
 
     #[test]
+    fn taskbar_a_overrides_a_stale_native_imm_result() {
+        assert_eq!(
+            resolve_active_guess(TaskbarModeProbe::Known(ImeGuess::No), Some(ImeGuess::Yes)),
+            ImeGuess::No
+        );
+    }
+
+    #[test]
+    fn ambiguous_taskbar_state_never_falls_back_to_injection_authority() {
+        for imm in [ImeGuess::Yes, ImeGuess::No, ImeGuess::Unknown] {
+            assert_eq!(
+                resolve_active_guess(TaskbarModeProbe::Ambiguous, Some(imm)),
+                ImeGuess::Unknown
+            );
+        }
+    }
+
+    #[test]
+    fn unavailable_taskbar_state_uses_the_bounded_imm_result() {
+        for imm in [ImeGuess::Yes, ImeGuess::No, ImeGuess::Unknown] {
+            assert_eq!(
+                resolve_active_guess(TaskbarModeProbe::Unavailable, Some(imm)),
+                imm
+            );
+        }
+    }
+
+    #[test]
     fn focused_child_window_is_preferred_for_the_active_foreground() {
         let foreground = test_hwnd(1);
         let focus = test_hwnd(2);
@@ -406,6 +474,42 @@ mod tests {
         );
 
         assert_eq!(guess, ImeGuess::Yes);
+    }
+
+    #[test]
+    fn conflicting_focused_and_foreground_states_remain_unknown() {
+        let foreground = test_hwnd(1);
+        let focused = test_hwnd(2);
+        let focused_ime = test_hwnd(3);
+        let foreground_ime = test_hwnd(4);
+        let input_windows = ForegroundInputWindows {
+            foreground,
+            focused: Some(focused),
+        };
+
+        let guess = query_active_guess(
+            &input_windows,
+            |window| {
+                if window == focused {
+                    Some(focused_ime)
+                } else if window == foreground {
+                    Some(foreground_ime)
+                } else {
+                    None
+                }
+            },
+            |window| {
+                if window == focused_ime {
+                    Some(ImeGuess::Yes)
+                } else if window == foreground_ime {
+                    Some(ImeGuess::No)
+                } else {
+                    None
+                }
+            },
+        );
+
+        assert_eq!(guess, ImeGuess::Unknown);
     }
 
     #[test]

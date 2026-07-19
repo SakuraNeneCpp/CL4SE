@@ -1,6 +1,6 @@
 [package]
 name = "cl4se"
-version = "1.0.5"
+version = "1.0.6"
 edition = "2021"
 description = "Caps Lock for Safe Enter: assign IME commit and optional Shift+Enter to Caps Lock"
 license = "MIT"
