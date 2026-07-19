@@ -7,7 +7,7 @@ fn version_is_available() -> Result<(), Box<dyn Error>> {
         .output()?;
 
     assert!(output.status.success());
-    assert_eq!(String::from_utf8(output.stdout)?.trim(), "cl4se 1.0.0");
+    assert_eq!(String::from_utf8(output.stdout)?.trim(), "cl4se 1.0.1");
     Ok(())
 }
 
