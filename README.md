@@ -26,7 +26,7 @@ macOS / Linux では配置後に実行権限を付ける。
 chmod 755 /path/to/cl4se
 ```
 
-自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v1.0.4 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
+自動起動登録は現在の実行ファイルの絶対パスを保存する。配置先は権限設定と `install-autostart` より前に確定し、移動した場合は再登録する。v1.0.5 の macOS バイナリは未署名・未notarizeのため、初回実行が遮断された場合はチェックサム確認後に「システム設定 > プライバシーとセキュリティ」から実行を許可する。
 
 ### 2. 権限を設定し診断する
 
@@ -315,7 +315,7 @@ pub trait Autostart {
 | キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。リピート状態もCapsLock専用のscanCode状態で追跡し、vkCodeに依存しない。戻り値1で抑止 |
 | マウス観測 | `WH_MOUSE_LL`(クリックのみ、Composingリセット用) |
 | フォーカス観測 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` |
-| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓（取得不能時は前面窓）に対応する既定IMEウィンドウを `ImmGetDefaultIMEWnd` で取得。`WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で照会し、open（タスクバー表示「あ」）は `Yes`、closed（「A」）は `No`。IMEウィンドウ取得不能、タイムアウト、解決中の前面窓変更は `Unknown` |
+| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓（取得不能時は前面窓）に対応する既定IMEウィンドウを `ImmGetDefaultIMEWnd` で取得。`WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` と `IMC_GETCONVERSIONMODE (0x0001)` を `SendMessageTimeoutW` で照会する。closed、またはopenでも `IME_CMODE_NATIVE` がない英数字モード（タスクバー表示「A」）は `No`。openかつnativeで変換禁止でない場合は `Yes`。IMEウィンドウ取得不能、タイムアウト、open中の変換モード取得不能、解決中の前面窓変更は `Unknown` |
 | `ime_id` | TSF `ITfInputProcessorProfileMgr::GetActiveProfile` でアクティブ入力プロファイルを取得し、MS-IME / Google 日本語入力の CLSID と照合(**要検証**: 呼び出し方法と各CLSID値)。取得不能は `None`(→ Enter に解決) |
 | キー注入 | `SendInput`(確定用VK_RETURN / VK_CONTROL + `M`、任意設定の安全改行用VK_SHIFT + VK_RETURNの一連)。`dwExtraInfo` に自前マーカー。フック側は `LLKHF_INJECTED` + マーカーで自イベントを無視 |
 | 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" start`。`start` がウィンドウなしの `run` プロセスを生成して終了 |

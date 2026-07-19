@@ -137,3 +137,24 @@ fn t10_opt_in_shift_enter_runs_only_for_known_non_composing_state() {
         Decision::Suppress
     );
 }
+
+#[test]
+fn t10b_windows_alphanumeric_input_stays_idle_and_uses_safe_newline() {
+    let mut engine = Engine::new(&shift_enter_config(), Platform::Windows);
+    let mut ime = MockImeStateProvider {
+        snapshot: ImeSnapshot {
+            active: ImeGuess::No,
+            ime_id: Some("ms-ime".to_owned()),
+        },
+    };
+
+    assert_eq!(
+        engine.handle_event(printable(), &mut ime, Duration::ZERO),
+        Decision::Ignore
+    );
+    assert!(!engine.is_composing());
+    assert_eq!(
+        engine.handle_event(caps_lock(), &mut ime, Duration::from_millis(10)),
+        Decision::InjectShiftEnter
+    );
+}

@@ -10,7 +10,7 @@ use windows::{
             COINIT_APARTMENTTHREADED,
         },
         UI::{
-            Input::Ime::ImmGetDefaultIMEWnd,
+            Input::Ime::{ImmGetDefaultIMEWnd, IME_CMODE_NATIVE, IME_CMODE_NOCONVERSION},
             TextServices::{
                 CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr,
                 GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE, TF_PROFILETYPE_INPUTPROCESSOR,
@@ -28,6 +28,7 @@ use crate::{
     platform::ImeStateProvider,
 };
 
+const IMC_GETCONVERSIONMODE: usize = 0x0001;
 const IMC_GETOPENSTATUS: usize = 0x0005;
 const IME_QUERY_TIMEOUT_MS: u32 = 100;
 
@@ -99,10 +100,11 @@ impl WindowsImeStateProvider {
         };
 
         // Query the focused application's default IME window rather than
-        // borrowing a context owned by another process. A foreign context is
-        // not reliably accessible, while the bounded IME message is designed
-        // to query that window without retaining its state.
-        let guess = query_active_guess(&input_windows, default_ime_window, query_ime_open_status);
+        // borrowing a context owned by another process. Open status alone is
+        // insufficient because an open IME can be in alphanumeric mode (the
+        // taskbar "A"); the conversion flags distinguish that from native
+        // input without retaining foreign input-context state.
+        let guess = query_active_guess(&input_windows, default_ime_window, query_ime_guess);
 
         // The worker may have waited for a foreign IME window to answer. A
         // changed foreground invalidates the result rather than risking an
@@ -127,6 +129,14 @@ impl WindowsImeStateProvider {
 }
 
 fn query_ime_open_status(ime_window: HWND) -> Option<bool> {
+    query_ime_control(ime_window, IMC_GETOPENSTATUS).map(|status| status != 0)
+}
+
+fn query_ime_conversion_mode(ime_window: HWND) -> Option<u32> {
+    u32::try_from(query_ime_control(ime_window, IMC_GETCONVERSIONMODE)?).ok()
+}
+
+fn query_ime_control(ime_window: HWND, command: usize) -> Option<usize> {
     let mut result = 0usize;
     // SAFETY: ime_window is returned by ImmGetDefaultIMEWnd. The output
     // pointer remains valid for this bounded synchronous call. SMTO flags
@@ -135,29 +145,55 @@ fn query_ime_open_status(ime_window: HWND) -> Option<bool> {
         SendMessageTimeoutW(
             ime_window,
             WM_IME_CONTROL,
-            WPARAM(IMC_GETOPENSTATUS),
+            WPARAM(command),
             LPARAM(0),
             SMTO_ABORTIFHUNG | SMTO_BLOCK,
             IME_QUERY_TIMEOUT_MS,
             Some(&mut result),
         )
     };
-    (delivered.0 != 0).then_some(result != 0)
+    (delivered.0 != 0).then_some(result)
+}
+
+fn query_ime_guess(ime_window: HWND) -> Option<ImeGuess> {
+    let open = query_ime_open_status(ime_window)?;
+    let conversion_mode = if open {
+        query_ime_conversion_mode(ime_window)
+    } else {
+        None
+    };
+    log::debug!("Windows IME status: open={open}, conversion_mode={conversion_mode:?}");
+    guess_from_ime_status(open, conversion_mode)
+}
+
+fn guess_from_ime_status(open: bool, conversion_mode: Option<u32>) -> Option<ImeGuess> {
+    if !open {
+        return Some(ImeGuess::No);
+    }
+
+    let conversion_mode = conversion_mode?;
+    let native = conversion_mode & IME_CMODE_NATIVE.0 != 0;
+    let conversion_disabled = conversion_mode & IME_CMODE_NOCONVERSION.0 != 0;
+    Some(if native && !conversion_disabled {
+        ImeGuess::Yes
+    } else {
+        ImeGuess::No
+    })
 }
 
 fn query_active_guess(
     input_windows: &ForegroundInputWindows,
     mut ime_window_for: impl FnMut(HWND) -> Option<HWND>,
-    mut open_status_for: impl FnMut(HWND) -> Option<bool>,
+    mut guess_for: impl FnMut(HWND) -> Option<ImeGuess>,
 ) -> ImeGuess {
     for input_window in input_windows.candidates().into_iter().flatten() {
         let Some(ime_window) = ime_window_for(input_window) else {
             continue;
         };
-        let Some(open) = open_status_for(ime_window) else {
+        let Some(guess) = guess_for(ime_window) else {
             continue;
         };
-        return if open { ImeGuess::Yes } else { ImeGuess::No };
+        return guess;
     }
 
     ImeGuess::Unknown
@@ -338,7 +374,7 @@ mod tests {
         let guess = query_active_guess(
             &input_windows,
             |window| (window == foreground).then_some(foreground_ime),
-            |window| (window == foreground_ime).then_some(false),
+            |window| (window == foreground_ime).then_some(ImeGuess::No),
         );
 
         assert_eq!(guess, ImeGuess::No);
@@ -366,7 +402,7 @@ mod tests {
                     None
                 }
             },
-            |window| (window == foreground_ime).then_some(true),
+            |window| (window == foreground_ime).then_some(ImeGuess::Yes),
         );
 
         assert_eq!(guess, ImeGuess::Yes);
@@ -380,13 +416,44 @@ mod tests {
         };
 
         assert_eq!(
-            query_active_guess(&input_windows, |_| None, |_| Some(false)),
+            query_active_guess(&input_windows, |_| None, |_| Some(ImeGuess::No)),
             ImeGuess::Unknown
         );
     }
 
     #[test]
-    fn focused_ime_open_status_drives_both_known_states() {
+    fn open_alphanumeric_mode_shown_as_taskbar_a_is_known_no() {
+        assert_eq!(guess_from_ime_status(true, Some(0)), Some(ImeGuess::No));
+    }
+
+    #[test]
+    fn open_native_mode_is_known_yes() {
+        assert_eq!(
+            guess_from_ime_status(true, Some(IME_CMODE_NATIVE.0)),
+            Some(ImeGuess::Yes)
+        );
+    }
+
+    #[test]
+    fn closed_ime_does_not_require_conversion_mode() {
+        assert_eq!(guess_from_ime_status(false, None), Some(ImeGuess::No));
+    }
+
+    #[test]
+    fn missing_conversion_mode_for_open_ime_remains_unknown() {
+        assert_eq!(guess_from_ime_status(true, None), None);
+    }
+
+    #[test]
+    fn no_conversion_mode_is_not_treated_as_native_input() {
+        assert_eq!(
+            guess_from_ime_status(true, Some(IME_CMODE_NATIVE.0 | IME_CMODE_NOCONVERSION.0)),
+            Some(ImeGuess::No)
+        );
+    }
+
+    #[test]
+    fn focused_ime_result_drives_both_known_states() {
         let foreground = test_hwnd(1);
         let focused = test_hwnd(2);
         let focused_ime = test_hwnd(3);
@@ -399,7 +466,7 @@ mod tests {
             query_active_guess(
                 &input_windows,
                 |window| (window == focused).then_some(focused_ime),
-                |window| (window == focused_ime).then_some(true),
+                |window| (window == focused_ime).then_some(ImeGuess::Yes),
             ),
             ImeGuess::Yes
         );
@@ -407,7 +474,7 @@ mod tests {
             query_active_guess(
                 &input_windows,
                 |window| (window == focused).then_some(focused_ime),
-                |window| (window == focused_ime).then_some(false),
+                |window| (window == focused_ime).then_some(ImeGuess::No),
             ),
             ImeGuess::No
         );
