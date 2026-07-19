@@ -304,7 +304,7 @@ pub trait Autostart {
 | キー捕捉・抑止 | `SetWindowsHookExW(WH_KEYBOARD_LL)`。**スキャンコード 0x3A** で物理CapsLockを識別(JIS配列ではvkCodeが `VK_OEM_ATTN`(0xF0, 英数)になるためvk判定は不可)。リピート状態もCapsLock専用のscanCode状態で追跡し、vkCodeに依存しない。戻り値1で抑止 |
 | マウス観測 | `WH_MOUSE_LL`(クリックのみ、Composingリセット用) |
 | フォーカス観測 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` |
-| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` を `SendMessageTimeoutW` で送信。フォーカス窓でIMEウィンドウを取得できない・応答がない場合は、同じGUIスレッドの前面トップレベル窓へフォールバック。両方で取得不能、または解決中に前面窓が変化 → `Unknown` |
+| `ime_active` | `GetForegroundWindow()` のGUIスレッドから `GetGUIThreadInfo` で実際のキーボードフォーカス窓(`hwndFocus`)を解決し、その窓に対する `ImmGetDefaultIMEWnd` へ `WM_IME_CONTROL` / `IMC_GETOPENSTATUS (0x0005)` と `IMC_GETCONVERSIONMODE (0x0001)` を `SendMessageTimeoutW` で送信。openかつ `IME_CMODE_NATIVE` で変換禁止でない場合のみ `Yes`、closedまたは英数字モード(タスクバー表示「A」)は `No`。open時に変換モードを取得できなければ `Unknown`。フォーカス窓でIMEウィンドウを取得できない・応答がない場合は、同じGUIスレッドの前面トップレベル窓へフォールバック。両方で取得不能、または解決中に前面窓が変化 → `Unknown` |
 | `ime_id` | TSF `ITfInputProcessorProfileMgr::GetActiveProfile` でアクティブ入力プロファイルを取得し、MS-IME / Google 日本語入力の CLSID と照合(**要検証**: 呼び出し方法と各CLSID値)。取得不能は `None`(→ Enter に解決) |
 | キー注入 | `SendInput`(確定用VK_RETURN / VK_CONTROL + `M`、任意設定の安全改行用VK_SHIFT + VK_RETURNの一連)。`dwExtraInfo` に自前マーカー。フック側は `LLKHF_INJECTED` + マーカーで自イベントを無視 |
 | 自動起動 | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に値 `CL4SE` = `"<exe path>" start`。`start` がウィンドウなしの `run` プロセスを生成して終了 |
