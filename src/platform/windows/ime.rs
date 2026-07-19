@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use anyhow::{Context, Result};
 use windows::{
-    core::GUID,
+    core::{BOOL, GUID},
     Win32::{
         Foundation::{HWND, LPARAM, WPARAM},
         System::Com::{
@@ -10,7 +10,11 @@ use windows::{
             COINIT_APARTMENTTHREADED,
         },
         UI::{
-            Input::Ime::{ImmGetDefaultIMEWnd, IME_CMODE_NATIVE, IME_CMODE_NOCONVERSION},
+            Input::Ime::{
+                ImmEnumInputContext, ImmGetContext, ImmGetConversionStatus, ImmGetDefaultIMEWnd,
+                ImmGetOpenStatus, ImmReleaseContext, HIMC, IME_CMODE_NATIVE,
+                IME_CMODE_NOCONVERSION, IME_CONVERSION_MODE,
+            },
             TextServices::{
                 CLSID_TF_InputProcessorProfiles, ITfInputProcessorProfileMgr,
                 GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE, TF_PROFILETYPE_INPUTPROCESSOR,
@@ -99,7 +103,16 @@ impl WindowsImeStateProvider {
             return ImeGuess::Unknown;
         };
 
-        let guess = query_active_guess(&input_windows, default_ime_window, query_ime_guess);
+        let context_guess = query_context_active_guess(
+            &input_windows,
+            query_window_context_guess,
+            query_thread_context_guess,
+        );
+        let guess = if context_guess == ImeGuess::Unknown {
+            query_active_guess(&input_windows, default_ime_window, query_ime_guess)
+        } else {
+            context_guess
+        };
 
         // The worker may have waited for a foreign IME window to answer. A
         // changed foreground invalidates the result rather than risking an
@@ -175,6 +188,112 @@ fn guess_from_ime_status(open: bool, conversion_mode: Option<u32>) -> Option<Ime
     })
 }
 
+fn query_window_context_guess(input_window: HWND) -> Option<ImeGuess> {
+    // SAFETY: input_window is a non-null HWND returned by Windows. Every
+    // non-null input context acquired here is released before returning.
+    let context = unsafe { ImmGetContext(input_window) };
+    if context.0.is_null() {
+        return None;
+    }
+
+    let guess = query_input_context_guess(context);
+    // SAFETY: This balances the successful ImmGetContext call above for the
+    // same window and context handle.
+    if !unsafe { ImmReleaseContext(input_window, context) }.as_bool() {
+        log::debug!("failed to release foreground IME input context");
+    }
+    guess
+}
+
+fn query_input_context_guess(context: HIMC) -> Option<ImeGuess> {
+    // SAFETY: context is supplied by ImmGetContext or ImmEnumInputContext and
+    // remains valid for the duration of this synchronous query.
+    let open = unsafe { ImmGetOpenStatus(context) }.as_bool();
+    if !open {
+        return Some(ImeGuess::No);
+    }
+
+    let mut conversion_mode = IME_CONVERSION_MODE(0);
+    // SAFETY: context is valid as described above and conversion_mode points
+    // to writable storage. Sentence mode is not needed.
+    let available =
+        unsafe { ImmGetConversionStatus(context, Some(&mut conversion_mode), None).as_bool() };
+    available
+        .then_some(conversion_mode.0)
+        .and_then(|mode| guess_from_ime_status(true, Some(mode)))
+}
+
+#[derive(Default)]
+struct ContextGuessAccumulator {
+    guess: Option<ImeGuess>,
+    conflict: bool,
+}
+
+impl ContextGuessAccumulator {
+    fn observe(&mut self, guess: ImeGuess) {
+        if self.guess.is_some_and(|current| current != guess) {
+            self.conflict = true;
+        } else {
+            self.guess = Some(guess);
+        }
+    }
+
+    fn result(self) -> Option<ImeGuess> {
+        if self.conflict {
+            None
+        } else {
+            self.guess
+        }
+    }
+}
+
+// SAFETY: Windows invokes this callback synchronously from
+// ImmEnumInputContext. lparam points to the live accumulator passed by
+// query_thread_context_guess, and the callback never stores that pointer.
+unsafe extern "system" fn collect_context_guess(context: HIMC, lparam: LPARAM) -> BOOL {
+    // SAFETY: query_thread_context_guess passes a valid exclusive pointer to
+    // ContextGuessAccumulator for the complete enumeration call.
+    let accumulator = unsafe { &mut *(lparam.0 as *mut ContextGuessAccumulator) };
+    if let Some(guess) = query_input_context_guess(context) {
+        accumulator.observe(guess);
+    }
+    BOOL::from(true)
+}
+
+fn query_thread_context_guess(thread_id: u32) -> Option<ImeGuess> {
+    let mut accumulator = ContextGuessAccumulator::default();
+    // SAFETY: collect_context_guess has the required ABI and does not unwind;
+    // lparam points to accumulator, which remains live and exclusively owned
+    // for this synchronous call. Windows documents cross-process thread IDs.
+    let enumerated = unsafe {
+        ImmEnumInputContext(
+            thread_id,
+            Some(collect_context_guess),
+            LPARAM((&raw mut accumulator) as isize),
+        )
+    }
+    .as_bool();
+    if enumerated {
+        accumulator.result()
+    } else {
+        None
+    }
+}
+
+fn query_context_active_guess(
+    input_windows: &ForegroundInputWindows,
+    mut window_guess_for: impl FnMut(HWND) -> Option<ImeGuess>,
+    mut thread_guess_for: impl FnMut(u32) -> Option<ImeGuess>,
+) -> ImeGuess {
+    for input_window in input_windows.candidates().into_iter().flatten() {
+        if let Some(guess) = window_guess_for(input_window) {
+            return guess;
+        }
+    }
+
+    thread_guess_for(input_windows.thread_id).unwrap_or(ImeGuess::Unknown)
+}
+
 fn query_active_guess(
     input_windows: &ForegroundInputWindows,
     mut ime_window_for: impl FnMut(HWND) -> Option<HWND>,
@@ -197,6 +316,7 @@ fn query_active_guess(
 struct ForegroundInputWindows {
     foreground: HWND,
     focused: Option<HWND>,
+    thread_id: u32,
 }
 
 impl ForegroundInputWindows {
@@ -288,6 +408,7 @@ fn foreground_input_windows() -> Option<ForegroundInputWindows> {
     Some(ForegroundInputWindows {
         foreground,
         focused,
+        thread_id: foreground_thread,
     })
 }
 
@@ -363,6 +484,7 @@ mod tests {
         let input_windows = ForegroundInputWindows {
             foreground,
             focused: Some(focused),
+            thread_id: 10,
         };
 
         let guess = query_active_guess(
@@ -383,6 +505,7 @@ mod tests {
         let input_windows = ForegroundInputWindows {
             foreground,
             focused: Some(focused),
+            thread_id: 10,
         };
 
         let guess = query_active_guess(
@@ -407,6 +530,7 @@ mod tests {
         let input_windows = ForegroundInputWindows {
             foreground: test_hwnd(1),
             focused: Some(test_hwnd(2)),
+            thread_id: 10,
         };
 
         assert_eq!(
@@ -444,5 +568,33 @@ mod tests {
             guess_from_ime_status(true, Some(IME_CMODE_NATIVE.0 | IME_CMODE_NOCONVERSION.0)),
             Some(ImeGuess::No)
         );
+    }
+
+    #[test]
+    fn focused_input_context_precedes_stale_ime_window_fallback() {
+        let focused = test_hwnd(2);
+        let input_windows = ForegroundInputWindows {
+            foreground: test_hwnd(1),
+            focused: Some(focused),
+            thread_id: 10,
+        };
+
+        assert_eq!(
+            query_context_active_guess(
+                &input_windows,
+                |window| (window == focused).then_some(ImeGuess::No),
+                |_| Some(ImeGuess::Yes),
+            ),
+            ImeGuess::No
+        );
+    }
+
+    #[test]
+    fn conflicting_thread_contexts_remain_unknown() {
+        let mut accumulator = ContextGuessAccumulator::default();
+        accumulator.observe(ImeGuess::No);
+        accumulator.observe(ImeGuess::Yes);
+
+        assert_eq!(accumulator.result(), None);
     }
 }

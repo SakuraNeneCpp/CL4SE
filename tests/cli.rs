@@ -7,7 +7,7 @@ fn version_is_available() -> Result<(), Box<dyn Error>> {
         .output()?;
 
     assert!(output.status.success());
-    assert_eq!(String::from_utf8(output.stdout)?.trim(), "cl4se 1.0.2");
+    assert_eq!(String::from_utf8(output.stdout)?.trim(), "cl4se 1.0.3");
     Ok(())
 }
 
@@ -35,6 +35,7 @@ fn help_lists_background_lifecycle_commands() -> Result<(), Box<dyn Error>> {
     assert!(output.status.success());
     assert!(stdout.contains("start"));
     assert!(stdout.contains("stop"));
+    assert!(stdout.contains("update"));
     Ok(())
 }
 

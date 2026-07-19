@@ -29,6 +29,8 @@ enum Command {
     UninstallAutostart,
     /// Diagnose permissions, dependencies, and IME detection.
     Doctor,
+    /// Download, verify, and install the latest CL4SE release.
+    Update,
     /// Show or change persistent settings and restart a running instance.
     Setting {
         #[command(subcommand)]
@@ -73,6 +75,7 @@ fn main() -> Result<()> {
         Command::InstallAutostart => platform::install_autostart(),
         Command::UninstallAutostart => platform::uninstall_autostart(),
         Command::Doctor => platform::doctor(),
+        Command::Update => cl4se::update::update(),
         Command::Setting { command } => setting(command),
     }
 }
@@ -225,6 +228,16 @@ mod tests {
                 .expect("stop should parse")
                 .command,
             Command::Stop
+        ));
+    }
+
+    #[test]
+    fn update_command_parses_without_arguments() {
+        assert!(matches!(
+            Cli::try_parse_from(["cl4se", "update"])
+                .expect("update should parse")
+                .command,
+            Command::Update
         ));
     }
 
